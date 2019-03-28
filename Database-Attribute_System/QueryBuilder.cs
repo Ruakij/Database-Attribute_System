@@ -26,7 +26,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             // Check if class has attribute 'DbObject' and get the database table-name
             if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException("Cannot generate SQL-Query of class. Missing Attribute 'DbObject'");
-            string tableName = dbObjectAttribute._tableName ?? dbObjectAttribute._tableName;    // If no alternative table-name is specified, use the class-name
+            string tableName = dbObjectAttribute._tableName ?? classType.Name;    // If no alternative table-name is specified, use the class-name
 
             // Iterate thru all properties
             List<string> dbPrimaryKeys = new List<string>() { };
