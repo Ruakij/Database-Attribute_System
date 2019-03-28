@@ -25,39 +25,38 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         public static string SelectByPrimaryKeys(Type classType, params object[] comparisonValues)
         {
             // Check if class has attribute 'DbObject' and get the database table-name
-            DbObject dbObjectAttribute = classType.GetCustomAttribute(typeof(DbObject), true) as DbObject;
-            if (dbObjectAttribute == null) throw new InvalidOperationException("Cannot generate SQL-Query of class. Missing Attribute 'DbObject'");
+            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException("Cannot generate SQL-Query of class. Missing Attribute 'DbObject'");
             string tableName = dbObjectAttribute._tableName ?? dbObjectAttribute._tableName;    // If no alternative table-name is specified, use the class-name
 
             // Iterate thru all properties
             List<string> dbPrimaryKeys = new List<string>() { };
-            foreach (System.Reflection.PropertyInfo pi in classType.GetProperties())
+            foreach (System.Reflection.FieldInfo fi in classType.GetRuntimeFields())
             {
                 // Get primaryKey attribute from current property
-                DbPrimaryKey pkey = pi.GetCustomAttribute(typeof(DbPrimaryKey) ,true) as DbPrimaryKey;
-                if(pkey != null)
+                if (fi.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey)
                 {
-                    string dbAttributeName = pkey._attributeName ?? pi.Name;     // If no alternative attribute-name is specified, use the property-name
+                    string dbAttributeName = pkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
                     dbPrimaryKeys.Add(dbAttributeName);
                 }
             }
 
-            if (comparisonValues.Length != dbPrimaryKeys.Count)
-                throw new InvalidOperationException("Primary-key number of class/table and number of comparison values is not equal!");
+            if (comparisonValues.Length != dbPrimaryKeys.Count) throw new InvalidOperationException("Primary-key number of class/table and number of comparison values is not equal!"); 
 
-            object[] whereParams = new object[comparisonValues.Length*2];
-            for (int i=0,c=0; c<whereParams.Length; i++,c+=2)
+
+            object[] param = new object[comparisonValues.Length * 2];
+            for (int i = 0, c = 0; c < param.Length; i++, c += 2)
             {
                 string sql_string = "";
 
-                if (i > 0) sql_string += " AND ";
+                if (i == 0) sql_string += $"SELECT * FROM {tableName} WHERE ";
+                else sql_string += " AND ";
                 sql_string += $"{dbPrimaryKeys[i]}=";
 
-                whereParams[c] = sql_string;
-                whereParams[c+1] = comparisonValues[i];
+                param[c] = sql_string;
+                param[c + 1] = comparisonValues[i];
             }
 
-            return BuildQuery($"SELECT * FROM {tableName} WHERE ", whereParams);
+            return BuildQuery(param);
         }
 
 
@@ -69,38 +68,53 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <para/>Example: "SELECT * FROM table WHERE id=", id, " AND name=", name</param>
         public static string BuildQuery(params object[] param)
         {
-            string query = "";
-            for (int i = 0; i < param.Length; i++)
+            // Convert array to list and add object[] to it accordingly
+            List<object> paramz = new List<object>() { };
+            foreach (object obj in param)
             {
-                if (i % 2 == 0) query += param[i];  // Every 'even' count will just add
+                if (!(obj is object[]))
+                    paramz.Add(obj);
+                else
+                {
+                    foreach (object obj2 in (object[])obj)
+                    {
+                        paramz.Add(obj2);
+                    }
+                }
+            }
+
+            string query = "";
+            for (int i = 0; i < paramz.Count; i++)
+            {
+                if (i % 2 == 0) query += paramz[i];  // Every 'even' count will just add
                 else       // Every 'uneven' count will handle param as passed variable    
                 {
                     string paramString = "";
-                    if (param[i] == null)            // Handle null
+                    if (paramz[i] == null)            // Handle null
                     {
                         paramString = "null";
                     }
-                    else if (param[i].GetType() == typeof(string))       // Handle strings
+                    else if (paramz[i].GetType() == typeof(string))       // Handle strings
                     {
-                        paramString = "'" + Function.SqlEscape((string)param[i]) + "'";  // wrap in sql-brackets and escape sql, if any
+                        paramString = "'" + Function.SqlEscape((string)paramz[i]) + "'";  // wrap in sql-brackets and escape sql, if any
                     }
-                    else if (param[i].GetType() == typeof(int) || param[i].GetType() == typeof(float) || param[i].GetType() == typeof(double))  // Handle int, float & double
+                    else if (paramz[i].GetType() == typeof(int) || paramz[i].GetType() == typeof(float) || paramz[i].GetType() == typeof(double))  // Handle int, float & double
                     {
-                        paramString = param[i].ToString().Replace(",", ".");    // just format to string and form comma to sql-comma
+                        paramString = paramz[i].ToString().Replace(",", ".");    // just format to string and form comma to sql-comma
                     }
-                    else if (param[i].GetType() == typeof(DateTime))        // Handle DateTime
+                    else if (paramz[i].GetType() == typeof(DateTime))        // Handle DateTime
                     {
-                        DateTime dateTime = (DateTime)param[i];
+                        DateTime dateTime = (DateTime)paramz[i];
                         paramString = "'" + Function.SqlSerialise(dateTime) + "'";     // wrap in sql-brackets and convert to sql-datetime
                     }
-                    else if (param[i].GetType() == typeof(Guid))        // Handle DateTime
+                    else if (paramz[i].GetType() == typeof(Guid))        // Handle DateTime
                     {
-                        string guid = ((Guid)param[i]).ToString();  // Get Guid as string
+                        string guid = ((Guid)paramz[i]).ToString();  // Get Guid as string
                         paramString = "'" + guid + "'";                 // wrap in sql-brackets
                     }
                     else        // Unknown type in params
                     {
-                        throw new Exception($"Error in query-builder: Type '{param.GetType().ToString()}' cannot be used!");
+                        throw new Exception($"Error in query-builder: Type '{paramz[i].GetType().ToString()}' cannot be used!");
                     }
 
                     // Add formed param to query
