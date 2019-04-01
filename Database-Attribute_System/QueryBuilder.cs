@@ -7,57 +7,84 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 {
     public class QueryBuilder
     {
-        /// <summary>
-        /// Build an SELECT-SQL-query by a database-primary-key<pragma/>
-        /// Will build the query-string based on the <paramref name="comparisonValue"/> including serialising and escaping for SQL.<para/>
-        /// </summary>
-        /// <param name="handler">Method to send querys to the database</param>
-        /// <param name="primaryKey">Database comparison value</param>
-        /// <returns>Built SQL-Query</returns>
-        public static string SelectByPrimaryKey(Type classType, object comparisonValue) => SelectByPrimaryKeys(classType, comparisonValue);
-        /// <summary>
-        /// Build an SELECT-SQL-query by database-primary-keys<pragma/>
-        /// Will build the query-string based on the <paramref name="comparisonValues"/> including serialising and escaping for SQL.<para/>
-        /// </summary>
-        /// <param name="handler">Method to send querys to the database</param>
-        /// <param name="primaryKeys">Database comparison values (Must be the exact same amount as primary keys in class/table)</param>
-        /// <returns>Built SQL-Query</returns>
-        public static string SelectByPrimaryKeys(Type classType, params object[] comparisonValues)
+        public static string SelectByPrimaryKeys<T>(T classObject)
         {
-            // Check if class has attribute 'DbObject' and get the database table-name
-            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException("Cannot generate SQL-Query of class. Missing Attribute 'DbObject'");
-            string tableName = dbObjectAttribute._tableName ?? classType.Name;    // If no alternative table-name is specified, use the class-name
+            Type classType = classObject.GetType();
 
-            // Iterate thru all properties
-            List<string> dbPrimaryKeys = new List<string>() { };
-            foreach (System.Reflection.FieldInfo fi in classType.GetRuntimeFields())
-            {
-                // Get primaryKey attribute from current property
-                if (fi.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey)
-                {
-                    string dbAttributeName = pkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    dbPrimaryKeys.Add(dbAttributeName);
-                }
-            }
+            // Get db-table-name from class
+            string tableName = Function.GetDbTableName(classType);
 
-            if (comparisonValues.Length != dbPrimaryKeys.Count) throw new InvalidOperationException("Primary-key number of class/table and number of comparison values is not equal!"); 
+            // Get class db-fields
+            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
 
-
-            object[] param = new object[comparisonValues.Length * 2];
-            for (int i = 0, c = 0; c < param.Length; i++, c += 2)
-            {
-                string sql_string = "";
-
-                if (i == 0) sql_string += $"SELECT * FROM {tableName} WHERE ";
-                else sql_string += " AND ";
-                sql_string += $"{dbPrimaryKeys[i]}=";
-
-                param[c] = sql_string;
-                param[c + 1] = comparisonValues[i];
-            }
-
+            // Build where statements with primaryKey/s
+            object[] param = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
+            // Add SQL-command part
+            param[0] += $"SELECT * FROM {tableName} WHERE ";
+            
+            // Build and return the query
             return BuildQuery(param);
         }
+
+
+        public static string UpdateByPrimaryKeys<T>(T classObject)
+        {
+            Type classType = classObject.GetType();
+
+            // Get db-table-name from class
+            string tableName = Function.GetDbTableName(classType);
+
+            // Get class db-fields
+            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+
+            // Add foreign-keys to attributes
+            foreach(KeyValuePair<string, object> dbForeignKey in dbForeignKeys)
+            {
+                dbAttributes.Add(dbForeignKey.Key, dbForeignKey.Value);
+            }
+
+            // Build set-parameters
+            object[] paramSet = Function.BuildKeyEqualQuery(dbAttributes, ", ");
+            // Add SQL-command part
+            paramSet[0] += $"UPDATE {tableName} SET ";
+
+            // Build where-parameters
+            object[] paramWhere = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
+            // Add SQL-command part
+            paramWhere[0] += " WHERE ";
+
+            // Build and return the query
+            return BuildQuery(paramSet, paramWhere);
+        }
+
+        public static string DeleteByPrimaryKeys<T>(T classObject)
+        {
+            Type classType = classObject.GetType();
+
+            // Get db-table-name from class
+            string tableName = Function.GetDbTableName(classType);
+
+            // Get class db-fields
+            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+
+            // Build where-parameters
+            object[] paramWhere = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
+            // Add SQL-command part
+            paramWhere[0] += $"DELETE FROM {tableName} WHERE ";
+
+            // Build and return the query
+            return BuildQuery(paramWhere);
+        }
+
 
 
         /// <summary>
