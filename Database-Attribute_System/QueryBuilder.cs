@@ -14,18 +14,18 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <returns>SELECT-Sql-query</returns>
-        public static string SelectByPrimaryKeys<T>(T classObject)
+        public static string SelectByPrimaryKey<T>(T classObject)
         {
             Type classType = classObject.GetType();
 
             // Get db-table-name from class
-            string tableName = DbFunction.GetDbTableName(classType);
+            string tableName = Function.GetDbTableName(classType);
 
             // Get class db-fields
             Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
             Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
             Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            DbFunction.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
             if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
 
             // Build where statements with primaryKey/s
@@ -44,18 +44,18 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <returns>UPDATE-Sql-query</returns>
-        public static string UpdateByPrimaryKeys<T>(T classObject)
+        public static string UpdateByPrimaryKey<T>(T classObject)
         {
             Type classType = classObject.GetType();
 
             // Get db-table-name from class
-            string tableName = DbFunction.GetDbTableName(classType);
+            string tableName = Function.GetDbTableName(classType);
 
             // Get class db-fields
             Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
             Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
             Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            DbFunction.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
             if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
 
             // Add foreign-keys to attributes
@@ -85,18 +85,18 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <returns>DELETE-Sql-query</returns>
-        public static string DeleteByPrimaryKeys<T>(T classObject)
+        public static string DeleteByPrimaryKey<T>(T classObject)
         {
             Type classType = classObject.GetType();
 
             // Get db-table-name from class
-            string tableName = DbFunction.GetDbTableName(classType);
+            string tableName = Function.GetDbTableName(classType);
 
             // Get class db-fields
             Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
             Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
             Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            DbFunction.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
             if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
 
             // Build where-parameters
