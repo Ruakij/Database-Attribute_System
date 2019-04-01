@@ -14,7 +14,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="data">The data</param>
-        /// <param name="ignoreDataAttributeNotInClass">This disables errors when class-field has no data-attribute</param>
+        /// <param name="ignoreDataAttributeNotInClass">This disables errors when class-field is missing an data-attribute</param>
         public static void FillObject<T>(T classObject, Dictionary<string, object> data, bool ignoreDataAttributeNotInClass = false)
         {
             Type classType = classObject.GetType();
