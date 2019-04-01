@@ -131,33 +131,9 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 if (i % 2 == 0) query += paramz[i];  // Every 'even' count will just add
                 else       // Every 'uneven' count will handle param as passed variable    
                 {
-                    string paramString = "";
-                    if (paramz[i] == null)            // Handle null
-                    {
-                        paramString = "null";
-                    }
-                    else if (paramz[i].GetType() == typeof(string))       // Handle strings
-                    {
-                        paramString = "'" + Function.SqlEscape((string)paramz[i]) + "'";  // wrap in sql-brackets and escape sql, if any
-                    }
-                    else if (paramz[i].GetType() == typeof(byte) || paramz[i].GetType() == typeof(int) || paramz[i].GetType() == typeof(float) || paramz[i].GetType() == typeof(double))  // Handle int, float & double
-                    {
-                        paramString = paramz[i].ToString().Replace(",", ".");    // just format to string and form comma to sql-comma
-                    }
-                    else if (paramz[i].GetType() == typeof(DateTime))        // Handle DateTime
-                    {
-                        DateTime dateTime = (DateTime)paramz[i];
-                        paramString = "'" + Function.SqlSerialise(dateTime) + "'";     // wrap in sql-brackets and convert to sql-datetime
-                    }
-                    else if (paramz[i].GetType() == typeof(Guid))        // Handle DateTime
-                    {
-                        string guid = ((Guid)paramz[i]).ToString();  // Get Guid as string
-                        paramString = "'" + guid + "'";                 // wrap in sql-brackets
-                    }
-                    else        // Unknown type in params
-                    {
-                        throw new Exception($"Error in query-builder: Type '{paramz[i].GetType().ToString()}' cannot be used!");
-                    }
+                    string paramString = Function.SqlSerialise(paramz[i]);
+                    if(paramString == null)        // Unknown type in params
+                        throw new Exception($"Error in query-builder. Type '{paramz[i].GetType().ToString()}' cannot be serialised!");
 
                     // Add formed param to query
                     query += paramString;

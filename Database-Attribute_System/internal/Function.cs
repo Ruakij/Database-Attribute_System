@@ -103,5 +103,36 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             return tableName;
         }
+
+
+        public static string SqlSerialise(object obj)
+        {
+            if (obj == null)            // Handle null
+            {
+                return "null";
+            }
+            else if (obj.GetType() == typeof(string))       // Handle strings
+            {
+                return "'" + SqlEscape((string)obj) + "'";  // wrap in sql-brackets and escape sql, if any
+            }
+            else if (obj.GetType() == typeof(byte) || obj.GetType() == typeof(int) || obj.GetType() == typeof(float) || obj.GetType() == typeof(double))  // Handle int, float & double
+            {
+                return obj.ToString().Replace(",", ".");    // just format to string and form comma to sql-comma
+            }
+            else if (obj.GetType() == typeof(DateTime))        // Handle DateTime
+            {
+                DateTime dateTime = (DateTime)obj;
+                return "'" + SqlSerialise(dateTime) + "'";     // wrap in sql-brackets and convert to sql-datetime
+            }
+            else if (obj.GetType() == typeof(Guid))        // Handle DateTime
+            {
+                string guid = ((Guid)obj).ToString();  // Get Guid as string
+                return "'" + guid + "'";                 // wrap in sql-brackets
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 }

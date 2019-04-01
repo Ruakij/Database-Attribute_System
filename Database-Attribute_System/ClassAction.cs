@@ -5,7 +5,7 @@ using System.Text;
 
 namespace eu.railduction.netcore.dll.Database_Attribute_System
 {
-    class ClassAction
+    public class ClassAction
     {
         /// <summary>
         /// Fills an given dbObject with given data<para/>
