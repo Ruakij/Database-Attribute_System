@@ -14,8 +14,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="data">The data</param>
-        /// <param name="ignoreDataAttributeNotInClass">This disables errors when class-field is missing an data-attribute</param>
-        public static void FillObject<T>(T classObject, Dictionary<string, object> data, bool ignoreDataAttributeNotInClass = false)
+        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
+        public static void FillObject<T>(T classObject, Dictionary<string, object> data, bool runDataLossChecks = true)
         {
             Type classType = classObject.GetType();
 
@@ -23,6 +23,36 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             // Get class-fields
             Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classObject);
+
+            if (runDataLossChecks)
+            {
+                // Check every data-attribute for match in class-fields
+                foreach (KeyValuePair<string, object> data_keySet in data)
+                {
+                    bool isFound = false;
+                    foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
+                    {
+                        if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
+                            isFound = true;
+                    }
+
+                    if (!isFound)
+                        throw new InvalidOperationException($"Could not fill object. Data-Attribute '{data_keySet.Key}' was not found in class!");
+                }
+                // Check every class-field for match in data-attributes
+                foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
+                {
+                    bool isFound = false;
+                    foreach (KeyValuePair<string, object> data_keySet in data)
+                    {
+                        if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
+                            isFound = true;
+                    }
+
+                    if (!isFound)
+                        throw new InvalidOperationException($"Could not fill object. Class-field '{field_keySet.Key}' was not found in data!");
+                }
+            }      
 
             // Iterate through data
             foreach (KeyValuePair<string, object> data_keySet in data)
@@ -41,9 +71,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                         break;
                     }
                 }
-
-                // If the field was not filled, throw an error if it will not be ignored
-                if (!ignoreDataAttributeNotInClass && !dataIsSet) throw new InvalidOperationException($"Could not fill object. Data-Attribute '{data_keySet.Key}' was not found class!");
             }
         }
 
