@@ -6,21 +6,9 @@ using System.Text;
 
 namespace eu.railduction.netcore.dll.Database_Attribute_System
 {
-    class Function
+    class DbFunction
     {
-        public static string SqlEscape(string str)
-        {
-            string str_cpy = str.Replace(@"'", @"\'");
-            return str_cpy;
-        }
-
-        public static string SqlSerialise(DateTime dt)
-        {
-            return dt.ToString("yyyy-MM-dd HH:mm:ss");
-        }
-
-
-        public static object[] BuildKeyEqualQuery(Dictionary<string, object> keysets, string seperator)
+        internal static object[] BuildKeyEqualQuery(Dictionary<string, object> keysets, string seperator)
         {
             object[] param = new object[keysets.Count * 2];
             int c = 0;
@@ -43,18 +31,18 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         public static string GetDbTableName(Type classType)
         {
             // Check if class has attribute 'DbObject' and get the database table-name
-            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException("Cannot generate SQL-Query of class. Missing Attribute 'DbObject'");
+            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. Missing Attribute 'DbObject'");
             string tableName = dbObjectAttribute._tableName ?? classType.Name;    // If no alternative table-name is specified, use the class-name
 
             return tableName;
         }
 
-        public static void ReadDbClassFields<T>(T classObject, ref Dictionary<string, object> dbPrimaryKeys, ref Dictionary<string, object> dbAttributes, ref Dictionary<string, object> dbForeignKeys)
+        internal static void ReadDbClassFields<T>(T classObject, ref Dictionary<string, object> dbPrimaryKeys, ref Dictionary<string, object> dbAttributes, ref Dictionary<string, object> dbForeignKeys)
         {
             Type classType = typeof(T);
 
             // Reset lists (just in case)
-            dbPrimaryKeys = new Dictionary<string, object> () { };
+            dbPrimaryKeys = new Dictionary<string, object>() { };
             dbAttributes = new Dictionary<string, object>() { };
             dbForeignKeys = new Dictionary<string, object>() { };
 
