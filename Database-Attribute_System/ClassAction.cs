@@ -48,9 +48,20 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
 
 
+        /// <summary>
+        /// Resolves an object with the database<para/>
+        /// Needs to have primaryKey/s set!<para/>
+        /// - Generates an query<para/>
+        /// - Sends an query via Func<para/>
+        /// - Fills the object with data
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="ignoreDataAttributeNotInClass">This disables errors when class-field has no data-attribute</param>
         public static void ResolveByPrimaryKey<T>(T classObject, Func<string, Dictionary<string, object>> queryExecutor, bool ignoreDataAttributeNotInClass = false)
         {
-            string query = QueryBuilder.SelectByPrimaryKeys(classObject);
+            string query = QueryBuilder.SelectByPrimaryKey(classObject);
             Dictionary<string, object> data = queryExecutor(query);
             FillObject(classObject, data, ignoreDataAttributeNotInClass);
         }
