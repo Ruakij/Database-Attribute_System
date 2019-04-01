@@ -23,7 +23,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Build where statements with primaryKey/s
             object[] param = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
             // Add SQL-command part
-            param[0] += $"SELECT * FROM {tableName} WHERE ";
+            param[0] = $"SELECT * FROM {tableName} WHERE "+ param[0];
             
             // Build and return the query
             return BuildQuery(param);
@@ -52,12 +52,12 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Build set-parameters
             object[] paramSet = Function.BuildKeyEqualQuery(dbAttributes, ", ");
             // Add SQL-command part
-            paramSet[0] += $"UPDATE {tableName} SET ";
+            paramSet[0] = $"UPDATE {tableName} SET "+ paramSet[0];
 
             // Build where-parameters
             object[] paramWhere = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
             // Add SQL-command part
-            paramWhere[0] += " WHERE ";
+            paramWhere[0] = " WHERE "+ paramWhere[0];
 
             // Build and return the query
             return BuildQuery(paramSet, paramWhere);
@@ -79,7 +79,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Build where-parameters
             object[] paramWhere = Function.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
             // Add SQL-command part
-            paramWhere[0] += $"DELETE FROM {tableName} WHERE ";
+            paramWhere[0] = $"DELETE FROM {tableName} WHERE "+ paramWhere[0];
 
             // Build and return the query
             return BuildQuery(paramWhere);

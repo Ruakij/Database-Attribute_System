@@ -51,7 +51,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
         public static void ReadDbClassFields<T>(T classObject, ref Dictionary<string, object> dbPrimaryKeys, ref Dictionary<string, object> dbAttributes, ref Dictionary<string, object> dbForeignKeys)
         {
-            Type classType = T.GetType();
+            Type classType = typeof(T);
 
             // Reset lists (just in case)
             dbPrimaryKeys = new Dictionary<string, object> () { };
