@@ -82,11 +82,11 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, Dictionary<string, object>> queryExecutor, bool runDataLossChecks = true)
+        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true)
         {
             string query = QueryBuilder.SelectByPrimaryKey(classObject);
-            Dictionary<string, object> data = queryExecutor(query);
-            FillObject(classObject, data, runDataLossChecks);
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);
+            FillObject(classObject, dataSet[0], runDataLossChecks);
         }
     }
 }
