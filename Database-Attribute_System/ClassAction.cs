@@ -57,9 +57,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Iterate through data
             foreach (KeyValuePair<string, object> data_keySet in data)
             {
-                // If the data was set
-                bool dataIsSet = false;
-
                 // Interate through class-fields
                 foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
                 { 
@@ -67,7 +64,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
                     {
                         field_keySet.Value.SetValue(classObject, data_keySet.Value);
-                        dataIsSet = true;
                         break;
                     }
                 }
