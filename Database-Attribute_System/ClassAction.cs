@@ -22,7 +22,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             string tableName = Function.GetDbTableName(classType);
 
             // Get class-fields
-            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classObject);
+            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
 
             if (runDataLossChecks)
             {
