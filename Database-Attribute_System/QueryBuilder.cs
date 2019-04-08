@@ -38,6 +38,59 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
 
         /// <summary>
+        /// Builds an SELECT-Sql-query based on an object<para/>
+        /// Object needs to have at least 1 attribute!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="attributeNames">Attributes and/or foreignKeys to use in lookup</param>
+        /// <returns>SELECT-Sql-query</returns>
+        public static string SelectByAttribute<T>(T classObject, params string[] attributeNames)
+        {
+            Type classType = classObject.GetType();
+
+            // Get db-table-name from class
+            string tableName = Function.GetDbTableName(classType);
+
+            // Get class db-fields
+            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+            if (dbAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No attribute found!");
+
+
+            Dictionary<string, object> attributes = new Dictionary<string, object>() { };
+            // Iterate through given names
+            foreach (string attributeName in attributeNames)
+            {
+                // Iterate through attributes of class
+                foreach (KeyValuePair<string, object> dbAttribute in dbAttributes)
+                {
+                    // If its a match, copy it to list
+                    if (dbAttribute.Key.ToLower() == attributeName.ToLower())
+                    {
+                        attributes.Add(dbAttribute.Key, dbAttribute.Value);
+                    }
+                }
+            }
+
+            object[] param = new object[1];
+            if (attributeNames != null)
+            {
+                // Build where statements with primaryKey/s
+                param = DbFunction.BuildKeyEqualQuery(attributes, " AND ");
+            }
+            
+            // Add SQL-command part
+            param[0] = $"SELECT * FROM {tableName} WHERE " + param[0];
+
+            // Build and return the query
+            return BuildQuery(param);
+        }
+
+
+        /// <summary>
         /// Builds an UPDATE-Sql-query based on an object<para/>
         /// Object needs to have at least 1 primary-key!
         /// </summary>
@@ -107,6 +160,59 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Build and return the query
             return BuildQuery(paramWhere);
         }
+
+        /// <summary>
+        /// Builds an DELETE-Sql-query based on an object<para/>
+        /// Object needs to have at least 1 primary-key!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="attributeNames">Attributes and/or foreignKeys to use in lookup</param>
+        /// <returns>DELETE-Sql-query</returns>
+        public static string DeleteByAttribute<T>(T classObject, params string[] attributeNames)
+        {
+            Type classType = classObject.GetType();
+
+            // Get db-table-name from class
+            string tableName = Function.GetDbTableName(classType);
+
+            // Get class db-fields
+            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
+            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
+            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
+            if (dbAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No attribute found!");
+
+
+            Dictionary<string, object> attributes = new Dictionary<string, object>() { };
+            // Iterate through given names
+            foreach (string attributeName in attributeNames)
+            {
+                // Iterate through attributes of class
+                foreach (KeyValuePair<string, object> dbAttribute in dbAttributes)
+                {
+                    // If its a match, copy it to list
+                    if (dbAttribute.Key.ToLower() == attributeName.ToLower())
+                    {
+                        attributes.Add(dbAttribute.Key, dbAttribute.Value);
+                    }
+                }
+            }
+
+            object[] param = new object[1];
+            if (attributeNames != null)
+            {
+                // Build where statements with primaryKey/s
+                param = DbFunction.BuildKeyEqualQuery(attributes, " AND ");
+            }
+
+            // Add SQL-command part
+            param[0] = $"DELETE FROM {tableName} WHERE " + param[0];
+
+            // Build and return the query
+            return BuildQuery(param);
+        }
+
 
 
 
