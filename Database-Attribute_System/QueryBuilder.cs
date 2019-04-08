@@ -8,11 +8,11 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
     public class QueryBuilder
     {
         /// <summary>
-        /// Builds an SELECT-Sql-query based on an object<para/>
-        /// Object needs to have at least 1 primary-key!
+        /// Builds an SELECT-Sql-query based on an object
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="tableName">The db-table-name</param>
         /// <returns>SELECT-Sql-query</returns>
         public static string SelectByPrimaryKey<T>(T classObject)
         {
@@ -28,13 +28,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
             if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
 
-            // Build where statements with primaryKey/s
-            object[] param = DbFunction.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
-            // Add SQL-command part
-            param[0] = $"SELECT * FROM {tableName} WHERE "+ param[0];
-            
-            // Build and return the query
-            return BuildQuery(param);
+            return SelectByAttribute(tableName, dbPrimaryKeys);
         }
 
         /// <summary>
@@ -42,53 +36,28 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// Object needs to have at least 1 attribute!
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="attributeNames">Attributes and/or foreignKeys to use in lookup</param>
+        /// <param name="tableName">The db-table-name</param>
+        /// <param name="dbAttributes">The db-attributes with dbAttribute-name and value<para/>If null is given, it will generate a default 'SELECT * FROM tableName'</param>
         /// <returns>SELECT-Sql-query</returns>
-        public static string SelectByAttribute<T>(T classObject, params string[] attributeNames)
+        public static string SelectByAttribute(string tableName, Dictionary<string, object> dbAttributes = null)
         {
-            Type classType = classObject.GetType();
-
-            // Get db-table-name from class
-            string tableName = Function.GetDbTableName(classType);
-
-            // Get class db-fields
-            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
-            if (dbAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No attribute found!");
-
-
-            Dictionary<string, object> attributes = new Dictionary<string, object>() { };
-            // Iterate through given names
-            foreach (string attributeName in attributeNames)
-            {
-                // Iterate through attributes of class
-                foreach (KeyValuePair<string, object> dbAttribute in dbAttributes)
-                {
-                    // If its a match, copy it to list
-                    if (dbAttribute.Key.ToLower() == attributeName.ToLower())
-                    {
-                        attributes.Add(dbAttribute.Key, dbAttribute.Value);
-                    }
-                }
-            }
-
             object[] param = new object[1];
-            if (attributeNames != null)
+            if (dbAttributes != null)
             {
                 // Build where statements with primaryKey/s
-                param = DbFunction.BuildKeyEqualQuery(attributes, " AND ");
+                param = DbFunction.BuildKeyEqualQuery(dbAttributes, " AND ");
             }
-            
+
+            string sqlCmd = $"SELECT * FROM {tableName}";
             // Add SQL-command part
-            param[0] = $"SELECT * FROM {tableName} WHERE " + param[0];
+            if (dbAttributes != null)
+                param[0] = $"{sqlCmd} WHERE {param[0]}";
+            else
+                param[0] = sqlCmd;
 
             // Build and return the query
             return BuildQuery(param);
         }
-
 
         /// <summary>
         /// Builds an UPDATE-Sql-query based on an object<para/>
@@ -152,67 +121,31 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
             if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
 
-            // Build where-parameters
-            object[] paramWhere = DbFunction.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
-            // Add SQL-command part
-            paramWhere[0] = $"DELETE FROM {tableName} WHERE "+ paramWhere[0];
-
             // Build and return the query
-            return BuildQuery(paramWhere);
+            return DeleteByAttribute(tableName, dbPrimaryKeys);
         }
 
-        /// <summary>
-        /// Builds an DELETE-Sql-query based on an object<para/>
-        /// Object needs to have at least 1 primary-key!
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="attributeNames">Attributes and/or foreignKeys to use in lookup</param>
-        /// <returns>DELETE-Sql-query</returns>
-        public static string DeleteByAttribute<T>(T classObject, params string[] attributeNames)
+        public static string DeleteByAttribute(string tableName, Dictionary<string, object> dbAttributes = null)
         {
-            Type classType = classObject.GetType();
-
-            // Get db-table-name from class
-            string tableName = Function.GetDbTableName(classType);
-
-            // Get class db-fields
-            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
-            if (dbAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No attribute found!");
-
-
-            Dictionary<string, object> attributes = new Dictionary<string, object>() { };
-            // Iterate through given names
-            foreach (string attributeName in attributeNames)
-            {
-                // Iterate through attributes of class
-                foreach (KeyValuePair<string, object> dbAttribute in dbAttributes)
-                {
-                    // If its a match, copy it to list
-                    if (dbAttribute.Key.ToLower() == attributeName.ToLower())
-                    {
-                        attributes.Add(dbAttribute.Key, dbAttribute.Value);
-                    }
-                }
-            }
-
             object[] param = new object[1];
-            if (attributeNames != null)
+            if (dbAttributes != null)
             {
                 // Build where statements with primaryKey/s
-                param = DbFunction.BuildKeyEqualQuery(attributes, " AND ");
+                param = DbFunction.BuildKeyEqualQuery(dbAttributes, " AND ");
             }
 
+            string sqlCmd = $"DELETE FROM {tableName}";
             // Add SQL-command part
-            param[0] = $"DELETE FROM {tableName} WHERE " + param[0];
+            if (dbAttributes != null)
+                param[0] = $"{sqlCmd} WHERE {param[0]}";
+            else
+                param[0] = sqlCmd;
 
             // Build and return the query
             return BuildQuery(param);
         }
 
+       
 
 
 

@@ -73,7 +73,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
         /// <summary>
         /// Resolves an object with the database<para/>
-        /// Needs to have primaryKey/s set!<para/>
+        /// Needs to have primaryKey/s-value/s set!<para/>
         /// - Generates an query<para/>
         /// - Sends an query via Func<para/>
         /// - Fills the object with data
@@ -84,9 +84,39 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true)
         {
-            string query = QueryBuilder.SelectByPrimaryKey(classObject);
-            List<Dictionary<string, object>> dataSet = queryExecutor(query);
-            FillObject(classObject, dataSet[0], runDataLossChecks);
+            string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+            FillObject(classObject, dataSet[0], runDataLossChecks);   // Fill the object
+        }
+
+        /// <summary>
+        /// Gets a list of dbObjects by attribute/s
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classType">Type of class</param>
+        /// <param name="attributes">attributes for select</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
+        /// <returns></returns>
+        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> attributes, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        {
+            string tableName = Function.GetDbTableName(classType);  // Get database-tableName
+            return GetListByAttribute<T>(tableName, attributes, queryExecutor, runDataLossChecks);
+        }
+        public static List<T> GetListByAttribute<T>(string tableName, Dictionary<string, object> attributes, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
+        {
+            string query = QueryBuilder.SelectByAttribute(tableName, attributes);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            List<T> objs = new List<T>() { };
+            foreach(Dictionary<string, object> data in dataSet)
+            {
+                T obj = new T();    // New object
+                FillObject(obj, data, runDataLossChecks);   // Fill it
+                objs.Add(obj);      // Add to list
+            }
+
+            return objs;    // Return list
         }
     }
 }
