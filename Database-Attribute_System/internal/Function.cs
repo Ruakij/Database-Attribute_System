@@ -31,6 +31,52 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             }
         }
 
+        internal static void ConvertAttributeToDbAttributes(Type classType, Dictionary<string, object> attributeNameAndValues)
+        {
+            Dictionary<string, FieldInfo> classFields = ReadDbClassFields(classType);
+
+            foreach (KeyValuePair<string, object> attributeNameAndValue in attributeNameAndValues)
+            {
+                bool nameFound = false;
+                foreach (KeyValuePair<string, FieldInfo> classField in classFields)
+                {
+                    if (attributeNameAndValue.Key.ToLower() == classField.Value.Name.ToLower())
+                    {
+                        attributeNameAndValues.Remove(attributeNameAndValue.Key);
+
+                        attributeNameAndValues.Add(classField.Key, attributeNameAndValue.Value);
+
+                        nameFound = true;
+                        break;
+                    }
+                }
+
+                if (!nameFound) throw new InvalidOperationException($"{attributeNameAndValue.Key} has no classField!");
+            }
+        }
+        internal static void ConvertAttributeToDbAttributes(Type classType, List<string> attributeNames)
+        {
+            Dictionary<string, FieldInfo> classFields = ReadDbClassFields(classType);
+
+            List<string> dbAttributes = new List<string>() { };
+            for(int i=0; i< attributeNames.Count; i++)
+            {
+                bool nameFound = false;
+                foreach (KeyValuePair<string, FieldInfo> classField in classFields)
+                {
+                    if(attributeNames[i].ToLower() == classField.Value.Name.ToLower())
+                    {
+                        attributeNames[i] = classField.Key;
+
+                        nameFound = true;
+                        break;
+                    }
+                }
+
+                if (!nameFound) throw new InvalidOperationException($"{attributeNames[i]} has no classField!");
+            }
+        }
+
         internal static void ReadDbClassFields<T>(T classObject, ref Dictionary<string, object> dbPrimaryKeys, ref Dictionary<string, object> dbAttributes, ref Dictionary<string, object> dbForeignKeys)
         {
             Type classType = typeof(T);
@@ -65,10 +111,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             }
         }
 
-        internal static Dictionary<string, FieldInfo> ReadDbClassFields<T>(T classObject)
+        internal static Dictionary<string, FieldInfo> ReadDbClassFields(Type classType)
         {
-            Type classType = typeof(T);
-
             Dictionary<string, FieldInfo> dbFields = new Dictionary<string, FieldInfo>();
 
             // Iterate thru all properties

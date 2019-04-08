@@ -94,18 +94,17 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classType">Type of class</param>
-        /// <param name="attributes">attributes for select</param>
+        /// <param name="fields">class-fields for select</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         /// <returns></returns>
-        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> attributes, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
         {
             string tableName = Function.GetDbTableName(classType);  // Get database-tableName
-            return GetListByAttribute<T>(tableName, attributes, queryExecutor, runDataLossChecks);
-        }
-        public static List<T> GetListByAttribute<T>(string tableName, Dictionary<string, object> attributes, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
-        {
-            string query = QueryBuilder.SelectByAttribute(tableName, attributes);   // Generate query
+
+            Function.ConvertAttributeToDbAttributes(classType, fields);
+
+            string query = QueryBuilder.SelectByAttribute(tableName, fields);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
 
             List<T> objs = new List<T>() { };
