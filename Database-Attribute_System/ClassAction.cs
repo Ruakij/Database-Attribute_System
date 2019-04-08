@@ -1,4 +1,5 @@
-﻿using System;
+﻿using eu.railduction.netcore.dll.Database_Attribute_System.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -72,21 +73,21 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
 
         /// <summary>
-        /// Resolves an object with the database<para/>
-        /// Needs to have primaryKey/s-value/s set!<para/>
-        /// - Generates an query<para/>
-        /// - Sends an query via Func<para/>
-        /// - Fills the object with data
+        /// Gets an dbObject
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true)
+        public static T GetByPrimaryKey<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
         {
-            string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
+            T obj = new T();
+
+            string query = QueryBuilder.SelectByPrimaryKey(obj);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
-            FillObject(classObject, dataSet[0], runDataLossChecks);   // Fill the object
+            FillObject(obj, dataSet[0], runDataLossChecks);   // Fill the object
+
+            return obj;
         }
 
         /// <summary>
@@ -116,6 +117,46 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             }
 
             return objs;    // Return list
+        }
+
+
+
+        /// <summary>
+        /// Resolves all foreignKeys with the database
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="max_depth">Determents how deep resolving will be executed</param>
+        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
+        public static void ResolveForeignKeys<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1, bool runDataLossChecks = true) where T: new()
+        {
+            Type classType = classObject.GetType();
+
+            // Get class-fields
+            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
+
+            foreach (KeyValuePair<string, FieldInfo> dbField in dbFields)
+            {
+                // If field is foreignKey
+                if (dbField.Value.GetCustomAttribute(typeof(DbForeignKey), true) is DbForeignKey fkey)
+                {
+                    FieldInfo f_Field = fkey._foreignKeyField;
+                    object f_value = f_Field.GetValue(classObject);
+
+                    // When its empty, get it
+                    if(f_value == null)
+                    {
+                        f_value = GetByPrimaryKey<T>(classType, queryExecutor, runDataLossChecks); ;
+                    }
+
+                    // Recursive resolving
+                    if (max_depth - 1 > 0)
+                    {
+                        ResolveForeignKeys(f_value, queryExecutor, max_depth - 1, runDataLossChecks);
+                    }
+                }
+            }
         }
     }
 }

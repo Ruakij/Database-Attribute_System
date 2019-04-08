@@ -17,7 +17,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         /// <param name="dbAttributeName">Name of database-attribute (case-sensitivity is determined from database-attribute-settings) ['null' if the same as field-name]</param>
         public DbPrimaryKey(string attributeName = null)
         {
-            this._attributeName = attributeName;
+            this._attributeName = attributeName;    // Todo: Automatic resolving of name if it is null (?)
         }
     }
 }
