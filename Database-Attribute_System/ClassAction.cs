@@ -73,15 +73,59 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
 
         /// <summary>
-        /// Gets an dbObject
+        /// Gets an dbObject by primaryKey/s
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static T GetByPrimaryKey<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
+        public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
         {
+            Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
+            primaryKeyData.Add(null, primaryKeyValue);
+
+            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor, runDataLossChecks);
+        }
+        public static T GetByPrimaryKey<T>(Type classType, string primaryKeyName, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        {
+            Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
+            primaryKeyData.Add(primaryKeyName, primaryKeyValue);
+
+            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor, runDataLossChecks);
+        }
+        public static T GetByPrimaryKey<T>(Type classType, Dictionary<string, object> primaryKeyData, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
+        {
+            // Create new empty object
             T obj = new T();
+
+            // Read all fields
+            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
+            // iterate thru them to check and fill object
+            foreach (KeyValuePair<string, FieldInfo> field in dbFields)
+            {
+                // primaryKeys
+                if (field.Value.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey)
+                {
+                    bool dataMatchFound = false;
+
+                    // Now search the corresponding primaryKeyData
+                    foreach (KeyValuePair<string, object> primaryKey in primaryKeyData)
+                    {
+                        // primaryKey matches
+                        if(field.Value.Name.ToLower() == primaryKey.Key.ToLower())
+                        {
+                            // Set data
+                            field.Value.SetValue(obj, primaryKey.Value);
+
+                            dataMatchFound = true;
+                            break;
+                        }
+                    }
+
+                    // If no data was found matching this field
+                    if (!dataMatchFound) throw new InvalidOperationException($"Cannot create object with primaryKeyData. No data assigned to field '{field.Value.Name}'");
+                }
+            }
 
             string query = QueryBuilder.SelectByPrimaryKey(obj);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
@@ -122,7 +166,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
 
         /// <summary>
-        /// Resolves all foreignKeys with the database
+        /// Resolves all foreignKeys with the database<pragma/>
+        /// Only works if the foreignKey is single (not assembled)!
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
@@ -147,7 +192,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     // When its empty, get it
                     if(f_value == null)
                     {
-                        f_value = GetByPrimaryKey<T>(classType, queryExecutor, runDataLossChecks); ;
+                        f_value = GetByPrimaryKey<T>(classType, f_value, queryExecutor, runDataLossChecks); ;
                     }
 
                     // Recursive resolving
