@@ -18,17 +18,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             Type classType = classObject.GetType();
 
-            // Get db-table-name from class
-            string tableName = Function.GetDbTableName(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            // Get class db-fields
-            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
-            if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
+            // Check if 'byPrimaryKey' is possible
+            if (dbObject.primaryKeyAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s!");
+            Dictionary<string, object> dbPrimaryKeys = Function.ReadFieldData(Function.ConvertToDerivedList(dbObject.primaryKeyAttributes), classObject);
 
-            return SelectByAttribute(tableName, dbPrimaryKeys);
+            return SelectByAttribute(dbObject._tableName, dbPrimaryKeys);
         }
 
         /// <summary>
@@ -70,15 +67,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             Type classType = classObject.GetType();
 
-            // Get db-table-name from class
-            string tableName = Function.GetDbTableName(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            // Get class db-fields
-            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
-            if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
+            // Check if 'byPrimaryKey' is possible
+            if (dbObject.primaryKeyAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s!");
+            Dictionary<string, object> dbPrimaryKeys = Function.ReadFieldData(Function.ConvertToDerivedList(dbObject.primaryKeyAttributes), classObject);
+            Dictionary<string, object> dbForeignKeys = Function.ReadFieldData(Function.ConvertToDerivedList(dbObject.foreignKeyAttributes), classObject);
+            Dictionary<string, object> dbAttributes = Function.ReadFieldData(Function.ConvertToDerivedList(dbObject.attributeAttributes), classObject);
 
             // Add foreign-keys to attributes
             foreach (KeyValuePair<string, object> dbForeignKey in dbForeignKeys)
@@ -89,7 +85,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Build set-parameters
             object[] paramSet = DbFunction.BuildKeyEqualQuery(dbAttributes, ", ");
             // Add SQL-command part
-            paramSet[0] = $"UPDATE {tableName} SET "+ paramSet[0];
+            paramSet[0] = $"UPDATE {dbObject._tableName} SET "+ paramSet[0];
 
             // Build where-parameters
             object[] paramWhere = DbFunction.BuildKeyEqualQuery(dbPrimaryKeys, " AND ");
@@ -111,18 +107,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             Type classType = classObject.GetType();
 
-            // Get db-table-name from class
-            string tableName = Function.GetDbTableName(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            // Get class db-fields
-            Dictionary<string, object> dbPrimaryKeys = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbAttributes = new Dictionary<string, object>() { };
-            Dictionary<string, object> dbForeignKeys = new Dictionary<string, object>() { };
-            Function.ReadDbClassFields(classObject, ref dbPrimaryKeys, ref dbAttributes, ref dbForeignKeys);
-            if (dbPrimaryKeys.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s found!");
+            // Check if 'byPrimaryKey' is possible
+            if (dbObject.primaryKeyAttributes.Count == 0) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. No primary-key/s!");
+            Dictionary<string, object> dbPrimaryKeys = Function.ReadFieldData(Function.ConvertToDerivedList(dbObject.primaryKeyAttributes), classObject);
 
             // Build and return the query
-            return DeleteByAttribute(tableName, dbPrimaryKeys);
+            return DeleteByAttribute(dbObject._tableName, dbPrimaryKeys);
         }
 
         public static string DeleteByAttribute(string tableName, Dictionary<string, object> dbAttributes = null)

@@ -8,6 +8,29 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 {
     public class ClassAction
     {
+        private static List<Type> initiatedClassTypes = new List<Type>() { };
+        /// <summary>
+        /// Initiates the attribute-system and preloads all necessary information<para/>
+        /// INFO: Will initiate necessary foreignObjects recursively!<para/>
+        /// If an class is already initiated, it will be ignored!
+        /// </summary>
+        /// <param name="classType">The classType to preload</param>
+        /// <returns>DbObject-attribute corresponding to the class</returns>
+        public static DbObject Init(Type classType)
+        {
+            // Check if given class is marked as dbObject
+            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObject)) throw new InvalidOperationException($"Cannot init '{classType.Name}'. Missing Attribute 'DbObject'");
+
+            if (!initiatedClassTypes.Contains(classType))
+            {
+                dbObject.Init(classType);   // Init dbObject
+                initiatedClassTypes.Add(classType);     // Set it to the list
+            }
+
+            return dbObject;
+        }
+
+
         /// <summary>
         /// Fills an given dbObject with given data<para/>
         /// Data-attribute-names and class-fieldNames have to match! (non case-sensitive)
@@ -16,55 +39,23 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="data">The data</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static void FillObject<T>(T classObject, Dictionary<string, object> data, bool runDataLossChecks = true)
+        public static void FillObject<T>(T classObject, Dictionary<string, object> data)
         {
             Type classType = classObject.GetType();
 
-            string tableName = Function.GetDbTableName(classType);
-
-            // Get class-fields
-            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
-
-            if (runDataLossChecks)
-            {
-                // Check every data-attribute for match in class-fields
-                foreach (KeyValuePair<string, object> data_keySet in data)
-                {
-                    bool isFound = false;
-                    foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
-                    {
-                        if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
-                            isFound = true;
-                    }
-
-                    if (!isFound)
-                        throw new InvalidOperationException($"Could not fill object. Data-Attribute '{data_keySet.Key}' was not found in class!");
-                }
-                // Check every class-field for match in data-attributes
-                foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
-                {
-                    bool isFound = false;
-                    foreach (KeyValuePair<string, object> data_keySet in data)
-                    {
-                        if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
-                            isFound = true;
-                    }
-
-                    if (!isFound)
-                        throw new InvalidOperationException($"Could not fill object. Class-field '{field_keySet.Key}' was not found in data!");
-                }
-            }      
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
             // Iterate through data
             foreach (KeyValuePair<string, object> data_keySet in data)
             {
                 // Interate through class-fields
-                foreach (KeyValuePair<string, FieldInfo> field_keySet in dbFields)
+                foreach (BaseAttribute baseAttribute in dbObject.baseAttributes)
                 { 
                     // If its a match, set the value
-                    if (field_keySet.Key.ToLower() == data_keySet.Key.ToLower())
+                    if (baseAttribute._attributeName.ToLower() == data_keySet.Key.ToLower())
                     {
-                        field_keySet.Value.SetValue(classObject, data_keySet.Value);
+                        baseAttribute.parentField.SetValue(classObject, data_keySet.Value);
                         break;
                     }
                 }
@@ -79,57 +70,54 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
             primaryKeyData.Add(null, primaryKeyValue);
 
-            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor, runDataLossChecks);
+            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor);
         }
-        public static T GetByPrimaryKey<T>(Type classType, string primaryKeyName, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        public static T GetByPrimaryKey<T>(Type classType, string primaryKeyName, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
             primaryKeyData.Add(primaryKeyName, primaryKeyValue);
 
-            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor, runDataLossChecks);
+            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor);
         }
-        public static T GetByPrimaryKey<T>(Type classType, Dictionary<string, object> primaryKeyData, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T: new()
+        public static T GetByPrimaryKey<T>(Type classType, Dictionary<string, object> primaryKeyData, Func<string, List<Dictionary<string, object>>> queryExecutor) where T: new()
         {
             // Create new empty object
             T obj = new T();
 
-            // Read all fields
-            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
             // iterate thru them to check and fill object
-            foreach (KeyValuePair<string, FieldInfo> field in dbFields)
+            foreach (DbPrimaryKey primaryKeyAtt in dbObject.primaryKeyAttributes)
             {
-                // primaryKeys
-                if (field.Value.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey)
+                bool dataMatchFound = false;
+
+                // Now search the corresponding primaryKeyData
+                foreach (KeyValuePair<string, object> primaryKey in primaryKeyData)
                 {
-                    bool dataMatchFound = false;
-
-                    // Now search the corresponding primaryKeyData
-                    foreach (KeyValuePair<string, object> primaryKey in primaryKeyData)
+                    // primaryKey matches
+                    if(primaryKeyAtt._attributeName.ToLower() == primaryKey.Key.ToLower())
                     {
-                        // primaryKey matches
-                        if(field.Value.Name.ToLower() == primaryKey.Key.ToLower())
-                        {
-                            // Set data
-                            field.Value.SetValue(obj, primaryKey.Value);
+                        // Set data
+                        primaryKeyAtt.parentField.SetValue(obj, primaryKey.Value);
 
-                            dataMatchFound = true;
-                            break;
-                        }
+                        dataMatchFound = true;
+                        break;
                     }
-
-                    // If no data was found matching this field
-                    if (!dataMatchFound) throw new InvalidOperationException($"Cannot create object with primaryKeyData. No data assigned to field '{field.Value.Name}'");
                 }
+
+                // If no data was found matching this field
+                if (!dataMatchFound) throw new InvalidOperationException($"Cannot create object with primaryKeyData. No data assigned to field '{primaryKeyAtt.parentField.Name}'");
             }
 
             string query = QueryBuilder.SelectByPrimaryKey(obj);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
-            FillObject(obj, dataSet[0], runDataLossChecks);   // Fill the object
+            FillObject(obj, dataSet[0]);   // Fill the object
 
             return obj;
         }
@@ -142,21 +130,22 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="fields">class-fields for select</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        /// <returns></returns>
-        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor, bool runDataLossChecks = true) where T : new()
+        /// <returns>List of dbObjects</returns>
+        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
-            string tableName = Function.GetDbTableName(classType);  // Get database-tableName
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
             Function.ConvertAttributeToDbAttributes(classType, fields);
 
-            string query = QueryBuilder.SelectByAttribute(tableName, fields);   // Generate query
+            string query = QueryBuilder.SelectByAttribute(dbObject._tableName, fields);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
 
             List<T> objs = new List<T>() { };
             foreach(Dictionary<string, object> data in dataSet)
             {
                 T obj = new T();    // New object
-                FillObject(obj, data, runDataLossChecks);   // Fill it
+                FillObject(obj, data);   // Fill it
                 objs.Add(obj);      // Add to list
             }
 
@@ -174,32 +163,27 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="max_depth">Determents how deep resolving will be executed</param>
         /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
-        public static void ResolveForeignKeys<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1, bool runDataLossChecks = true) where T: new()
+        public static void ResolveForeignKeys<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1) where T: new()
         {
             Type classType = classObject.GetType();
 
-            // Get class-fields
-            Dictionary<string, FieldInfo> dbFields = Function.ReadDbClassFields(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            foreach (KeyValuePair<string, FieldInfo> dbField in dbFields)
+            foreach (DbForeignObject foreignObjectAtt in dbObject.foreignObjectAttributes)
             {
-                // If field is foreignKey
-                if (dbField.Value.GetCustomAttribute(typeof(DbForeignKey), true) is DbForeignKey fkey)
+                object foreignObject_value = foreignObjectAtt.parentField.GetValue(classObject);
+
+                // When its empty, get it
+                if(foreignObject_value == null)
                 {
-                    FieldInfo f_Field = fkey._foreignKeyField;
-                    object f_value = f_Field.GetValue(classObject);
+                    foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor); ;
+                }
 
-                    // When its empty, get it
-                    if(f_value == null)
-                    {
-                        f_value = GetByPrimaryKey<T>(classType, f_value, queryExecutor, runDataLossChecks); ;
-                    }
-
-                    // Recursive resolving
-                    if (max_depth - 1 > 0)
-                    {
-                        ResolveForeignKeys(f_value, queryExecutor, max_depth - 1, runDataLossChecks);
-                    }
+                // Recursive resolving
+                if (max_depth - 1 > 0)
+                {
+                    ResolveForeignKeys(foreignObject_value, queryExecutor, max_depth - 1);
                 }
             }
         }

@@ -31,20 +31,65 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             }
         }
 
+        internal static List<BaseAttribute> ConvertToDerivedList(List<DbPrimaryKey> list)
+        {
+            List<BaseAttribute> derivedList = new List<BaseAttribute>() { };
+            foreach (BaseAttribute key in list)
+            {
+                derivedList.Add(key);
+            }
+            return derivedList;
+        }
+        internal static List<BaseAttribute> ConvertToDerivedList(List<DbAttribute> list)
+        {
+            List<BaseAttribute> derivedList = new List<BaseAttribute>() { };
+            foreach (BaseAttribute key in list)
+            {
+                derivedList.Add(key);
+            }
+            return derivedList;
+        }
+        internal static List<BaseAttribute> ConvertToDerivedList(List<DbForeignKey> list)
+        {
+            List<BaseAttribute> derivedList = new List<BaseAttribute>() { };
+            foreach (BaseAttribute key in list)
+            {
+                derivedList.Add(key);
+            }
+            return derivedList;
+        }
+
+        internal static Dictionary<string, object> ReadFieldData<T>(List<BaseAttribute> fieldAttributes, T classObject)
+        {
+            Dictionary<string, object> fieldData = new Dictionary<string, object>() { };
+
+            foreach (BaseAttribute attribute in fieldAttributes)
+            {
+                // Read the data and add it
+                fieldData.Add(
+                    attribute._attributeName,
+                    attribute.parentField.GetValue(classObject)
+                    );
+            }
+
+            return fieldData;   // Return the data
+        }
+
         internal static void ConvertAttributeToDbAttributes(Type classType, Dictionary<string, object> attributeNameAndValues)
         {
-            Dictionary<string, FieldInfo> classFields = ReadDbClassFields(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
             foreach (KeyValuePair<string, object> attributeNameAndValue in attributeNameAndValues)
             {
                 bool nameFound = false;
-                foreach (KeyValuePair<string, FieldInfo> classField in classFields)
+                foreach (BaseAttribute baseAttribute in dbObject.baseAttributes)
                 {
-                    if (attributeNameAndValue.Key.ToLower() == classField.Value.Name.ToLower())
+                    if (attributeNameAndValue.Key.ToLower() == baseAttribute.parentField.Name.ToLower())
                     {
                         attributeNameAndValues.Remove(attributeNameAndValue.Key);
 
-                        attributeNameAndValues.Add(classField.Key, attributeNameAndValue.Value);
+                        attributeNameAndValues.Add(baseAttribute._attributeName, attributeNameAndValue.Value);
 
                         nameFound = true;
                         break;
@@ -56,17 +101,17 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
         internal static void ConvertAttributeToDbAttributes(Type classType, List<string> attributeNames)
         {
-            Dictionary<string, FieldInfo> classFields = ReadDbClassFields(classType);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            List<string> dbAttributes = new List<string>() { };
-            for(int i=0; i< attributeNames.Count; i++)
+            for(int i=0; i< dbObject.baseAttributes.Count; i++)
             {
                 bool nameFound = false;
-                foreach (KeyValuePair<string, FieldInfo> classField in classFields)
+                foreach (BaseAttribute baseAttribute in dbObject.baseAttributes)
                 {
-                    if(attributeNames[i].ToLower() == classField.Value.Name.ToLower())
+                    if(attributeNames[i].ToLower() == baseAttribute.parentField.Name.ToLower())
                     {
-                        attributeNames[i] = classField.Key;
+                        attributeNames[i] = baseAttribute._attributeName;
 
                         nameFound = true;
                         break;
@@ -75,77 +120,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
                 if (!nameFound) throw new InvalidOperationException($"{attributeNames[i]} has no classField!");
             }
-        }
-
-        internal static void ReadDbClassFields<T>(T classObject, ref Dictionary<string, object> dbPrimaryKeys, ref Dictionary<string, object> dbAttributes, ref Dictionary<string, object> dbForeignKeys)
-        {
-            Type classType = typeof(T);
-
-            // Reset lists (just in case)
-            dbPrimaryKeys = new Dictionary<string, object>() { };
-            dbAttributes = new Dictionary<string, object>() { };
-            dbForeignKeys = new Dictionary<string, object>() { };
-
-            // Iterate thru all properties
-            foreach (System.Reflection.FieldInfo fi in classType.GetRuntimeFields())
-            {
-                // Check if current field is a db-field
-                if (fi.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey) // PrimaryKey
-                {
-                    string dbAttributeName = pkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    object value = fi.GetValue(classObject);
-                    dbPrimaryKeys.Add(dbAttributeName, value);
-                }
-                else if (fi.GetCustomAttribute(typeof(DbAttribute), true) is DbAttribute att)   // Attributes
-                {
-                    string dbAttributeName = att._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    object value = fi.GetValue(classObject);
-                    dbAttributes.Add(dbAttributeName, value);
-                }
-                else if (fi.GetCustomAttribute(typeof(DbForeignKey), true) is DbForeignKey fkey)    // ForeignKeys
-                {
-                    string dbAttributeName = fkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    object value = fi.GetValue(classObject);
-                    dbForeignKeys.Add(dbAttributeName, value);
-                }
-            }
-        }
-
-        internal static Dictionary<string, FieldInfo> ReadDbClassFields(Type classType)
-        {
-            Dictionary<string, FieldInfo> dbFields = new Dictionary<string, FieldInfo>();
-
-            // Iterate thru all properties
-            foreach (System.Reflection.FieldInfo fi in classType.GetRuntimeFields())
-            {
-                // Check if current field is a db-field
-                if (fi.GetCustomAttribute(typeof(DbPrimaryKey), true) is DbPrimaryKey pkey) // PrimaryKey
-                {
-                    string dbAttributeName = pkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    dbFields.Add(dbAttributeName, fi);
-                }
-                else if (fi.GetCustomAttribute(typeof(DbAttribute), true) is DbAttribute att)   // Attributes
-                {
-                    string dbAttributeName = att._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    dbFields.Add(dbAttributeName, fi);
-                }
-                else if (fi.GetCustomAttribute(typeof(DbForeignKey), true) is DbForeignKey fkey)    // ForeignKeys
-                {
-                    string dbAttributeName = fkey._attributeName ?? fi.Name;     // If no alternative attribute-name is specified, use the property-name
-                    dbFields.Add(dbAttributeName, fi);
-                }
-            }
-
-            return dbFields;
-        }
-
-        public static string GetDbTableName(Type classType)
-        {
-            // Check if class has attribute 'DbObject' and get the database table-name
-            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObjectAttribute)) throw new InvalidOperationException($"Cannot generate SQL-Query of '{classType.Name}'. Missing Attribute 'DbObject'");
-            string tableName = dbObjectAttribute._tableName ?? classType.Name;    // If no alternative table-name is specified, use the class-name
-
-            return tableName;
         }
 
 
