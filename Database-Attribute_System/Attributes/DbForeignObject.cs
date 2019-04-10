@@ -9,7 +9,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
     [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
     public class DbForeignObject : Attribute
     {
-        public Type _foreignObjectType;
+        public Type foreignObjectType;
 
         public string _foreignKeyName;
         public DbForeignKey foreignKeyAttribute;
@@ -20,11 +20,9 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         /// <summary>
         /// Marks variable as foreign-object of an dbObject
         /// </summary>
-        /// <param name="foreignObjectType">Type of foreignObject</param>
         /// <param name="foreignKeyName">Fieldname of foreignKey associated with the foreignObject</param>
-        public DbForeignObject(Type foreignObjectType, string foreignKeyName = null)
+        public DbForeignObject(string foreignKeyName = null)
         {
-            this._foreignObjectType = foreignObjectType;
             this._foreignKeyName = foreignKeyName;
         }
 
@@ -32,9 +30,10 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         {
             this.parentField = fi;
             this.classAttribute = classAttribute;
+            this.foreignObjectType = fi.GetType();
 
             // Init foreign-object class
-            DbObject foreignClassAttribute = ClassAction.Init(this._foreignObjectType);
+            DbObject foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
 
             // Check if something is weird
             if (foreignClassAttribute.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{foreignClassAttribute.parentClassType.Name}' does not have a primaryKey.");
