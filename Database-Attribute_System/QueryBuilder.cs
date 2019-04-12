@@ -138,7 +138,44 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return BuildQuery(param);
         }
 
-       
+        public static string InsertAttributes(string tableName, Dictionary<string, object> dbAttributes)
+        {
+            if (dbAttributes.Count == 0) throw new InvalidOperationException("Cannot generate SQL-Query. No attributes to insert.");
+
+            List<string> attributes = new List<string>() { };
+            List<object> data = new List<object>() { };
+
+            foreach (KeyValuePair<string, object> attribute in dbAttributes)
+            {
+                attributes.Add(attribute.Key);
+                data.Add(attribute.Value);
+            }
+
+            return InsertAttributes(tableName, attributes, data);
+        }
+        public static string InsertAttributes(string tableName, List<string> attributes, List<object> data)
+        {
+            if (attributes.Count != data.Count) throw new InvalidOperationException("Cannot generate SQL-Query. Attribute-count and data-count not equal.");
+
+            string attributesSeperatedByComma = "";
+            object[] attributeData = new object[attributes.Count*2];
+            int c = 0;
+            for(int i=0; i<attributes.Count*2; i+=2)
+            {
+                attributesSeperatedByComma += attributes[i];
+                attributeData[c] = data[i+1];
+
+                if(c+1 != attributes.Count*2)
+                {
+                    attributesSeperatedByComma += ", ";
+                    attributeData[c+1] = ",";
+                }
+                c +=2;
+            }
+
+            // Build and return the query
+            return BuildQuery($"INSERT INTO {tableName} ({attributesSeperatedByComma}) VALUES (", attributeData, ")");
+        }
 
 
 
