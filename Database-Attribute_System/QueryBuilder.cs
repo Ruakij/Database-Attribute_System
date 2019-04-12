@@ -138,6 +138,29 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return BuildQuery(param);
         }
 
+        /// <summary>
+        /// Builds an INSERT-Sql-query based on an object<para/>
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <param name="dbAttributes"></param>
+        /// <returns></returns>
+        public static string InsertAttributesByObject<T>(T classObject)
+        {
+            Type classType = classObject.GetType();
+
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
+            List<string> attributes = new List<string>() { };
+            List<object> data = new List<object>() { };
+            foreach(BaseAttribute baseAttribute in dbObject.baseAttributes)
+            {
+                attributes.Add(baseAttribute._attributeName);
+                data.Add(baseAttribute.parentField.GetValue(classObject));
+            }
+
+            return InsertAttributes(dbObject._tableName, attributes, data);
+        }
         public static string InsertAttributes(string tableName, Dictionary<string, object> dbAttributes)
         {
             if (dbAttributes.Count == 0) throw new InvalidOperationException("Cannot generate SQL-Query. No attributes to insert.");
