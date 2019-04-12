@@ -69,7 +69,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
-        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
@@ -115,13 +114,25 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 if (!dataMatchFound) throw new InvalidOperationException($"Cannot create object with primaryKeyData. No data assigned to field '{primaryKeyAtt.parentField.Name}'");
             }
 
-            string query = QueryBuilder.SelectByPrimaryKey(obj);   // Generate query
-            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
-            FillObject(obj, dataSet[0]);   // Fill the object
+            ResolveByPrimaryKey<T>(obj, queryExecutor);
 
             return obj;
         }
 
+        /// <summary>
+        /// Resolves dbObject by primaryKey/s<pragma/>
+        /// Object needs to have primaryKey/s set!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor)
+        {
+            string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+            FillObject(classObject, dataSet[0]);   // Fill the object
+        }
+        
         /// <summary>
         /// Gets a list of dbObjects by attribute/s
         /// </summary>
