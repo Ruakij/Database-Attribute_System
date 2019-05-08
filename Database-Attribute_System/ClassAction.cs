@@ -8,7 +8,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 {
     public class ClassAction
     {
-        private static List<Type> initiatedClassTypes = new List<Type>() { };
+        private static Dictionary<Type, DbObject> initiatedClassTypes = new Dictionary<Type, DbObject>() { };
         /// <summary>
         /// Initiates the attribute-system and preloads all necessary information<para/>
         /// INFO: Will initiate necessary foreignObjects recursively!<para/>
@@ -18,16 +18,21 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <returns>DbObject-attribute corresponding to the class</returns>
         public static DbObject Init(Type classType)
         {
-            // Check if given class is marked as dbObject
-            if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObject)) throw new InvalidOperationException($"Cannot init '{classType.Name}'. Missing Attribute 'DbObject'");
+            DbObject cachedDbObject;
+            initiatedClassTypes.TryGetValue(classType, out cachedDbObject);
 
-            if (!initiatedClassTypes.Contains(classType))
+            if (cachedDbObject == null)
             {
+                // Check if given class is marked as dbObject
+                if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObject)) throw new InvalidOperationException($"Cannot init '{classType.Name}'. Missing Attribute 'DbObject'");
+
                 dbObject.Init(classType);   // Init dbObject
-                initiatedClassTypes.Add(classType);     // Set it to the list
+                initiatedClassTypes.Add(classType, dbObject);     // Set it to the list
+
+                cachedDbObject = dbObject;
             }
 
-            return dbObject;
+            return cachedDbObject;
         }
 
 
