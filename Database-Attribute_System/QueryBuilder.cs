@@ -181,14 +181,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             if (attributes.Count != data.Count) throw new InvalidOperationException("Cannot generate SQL-Query. Attribute-count and data-count not equal.");
 
             string attributesSeperatedByComma = "";
-            object[] attributeData = new object[attributes.Count*2];
+            object[] attributeData = new object[attributes.Count*2 -1];
             int c = 0;
-            for(int i=0; i<attributes.Count*2; i+=2)
+            for(int i=0; i< attributes.Count; i++)
             {
                 attributesSeperatedByComma += attributes[i];
-                attributeData[c] = data[i+1];
+                attributeData[c] = data[i];
 
-                if(c+1 != attributes.Count*2)
+                if(c+1 != attributeData.Length)
                 {
                     attributesSeperatedByComma += ", ";
                     attributeData[c+1] = ",";

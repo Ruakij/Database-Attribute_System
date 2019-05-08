@@ -79,6 +79,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             // Read dbObject-attribute
             DbObject dbObject = ClassAction.Init(classType);
+            Dictionary<string, object> convertedAttributeNameAndValues = new Dictionary<string, object>();
 
             foreach (KeyValuePair<string, object> attributeNameAndValue in attributeNameAndValues)
             {
@@ -87,9 +88,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 {
                     if (attributeNameAndValue.Key.ToLower() == baseAttribute.parentField.Name.ToLower())
                     {
-                        attributeNameAndValues.Remove(attributeNameAndValue.Key);
-
-                        attributeNameAndValues.Add(baseAttribute._attributeName, attributeNameAndValue.Value);
+                        convertedAttributeNameAndValues.Add(baseAttribute._attributeName, attributeNameAndValue.Value);
 
                         nameFound = true;
                         break;

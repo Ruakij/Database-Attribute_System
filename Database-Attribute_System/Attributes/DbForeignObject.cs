@@ -30,7 +30,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         {
             this.parentField = fi;
             this.classAttribute = classAttribute;
-            this.foreignObjectType = fi.GetType();
+            this.foreignObjectType = fi.FieldType;
 
             // Init foreign-object class
             DbObject foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
@@ -45,7 +45,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
                 if(this._foreignKeyName != null)     // If i have a name
                 {
                     // check if name matches
-                    if (foreignKey.parentField.Name.ToLower() == this._foreignKeyName)
+                    if (foreignKey.parentField.Name.ToLower() == this._foreignKeyName.ToLower())
                     {
                         if(foreignKey.parentField.GetType() == primaryKeyType)
                         {

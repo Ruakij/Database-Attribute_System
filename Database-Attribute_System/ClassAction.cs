@@ -60,7 +60,10 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     // If its a match, set the value
                     if (baseAttribute._attributeName.ToLower() == data_keySet.Key.ToLower())
                     {
-                        baseAttribute.parentField.SetValue(classObject, data_keySet.Value);
+                        object value = data_keySet.Value;
+                        if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);   // If its a guid, i need to convert
+
+                        baseAttribute.parentField.SetValue(classObject, value);
                         break;
                     }
                 }
