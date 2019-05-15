@@ -57,6 +57,24 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
 
         /// <summary>
+        /// Builds an SELECT-Sql-query based on an object with custom where clause<para/>
+        /// Object needs to have at least 1 attribute!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="tableName">The db-table-name</param>
+        /// <param name="whereClause">Custom where-clause params attached to query (SELECT * FROM tableName WHERE whereClause)</param>
+        /// <returns>SELECT-Sql-query</returns>
+        public static string SelectWithWhere(string tableName, params object[] whereClause)
+        {
+            string sqlCmd = $"SELECT * FROM {tableName}";
+            // Add SQL-command part
+            whereClause[0] = $"{sqlCmd} WHERE {whereClause[0]}";
+
+            // Build and return the query
+            return BuildQuery(whereClause);
+        }
+
+        /// <summary>
         /// Builds an UPDATE-Sql-query based on an object<para/>
         /// Object needs to have at least 1 primary-key!
         /// </summary>

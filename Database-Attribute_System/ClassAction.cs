@@ -127,6 +127,34 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return obj;
         }
 
+        // ----
+
+        /// <summary>
+        /// Gets an dbObject by primaryKey/s
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="whereClause">Custom where-clause params attached to query (SELECT * FROM tableName WHERE whereClause)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        public static List<T> GetListWithWhere<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, params object[] whereClause) where T : new()
+        {
+            // Read dbObject - attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
+            string query = QueryBuilder.SelectWithWhere(dbObject._tableName, whereClause);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            List<T> objs = new List<T>() { };
+            foreach (Dictionary<string, object> data in dataSet)
+            {
+                T obj = new T();    // New object
+                FillObject(obj, data);   // Fill it
+                objs.Add(obj);      // Add to list
+            }
+
+            return objs;    // Return list
+        }
+
         /// <summary>
         /// Resolves dbObject by primaryKey/s<pragma/>
         /// Object needs to have primaryKey/s set!
