@@ -130,6 +130,31 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         // ----
 
         /// <summary>
+        /// Gets all dbObjects of class/table
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        public static List<T> GetList<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
+        {
+            // Read dbObject - attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
+            string query = QueryBuilder.SelectByAttribute(dbObject._tableName);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            List<T> objs = new List<T>() { };
+            foreach (Dictionary<string, object> data in dataSet)
+            {
+                T obj = new T();    // New object
+                FillObject(obj, data);   // Fill it
+                objs.Add(obj);      // Add to list
+            }
+
+            return objs;    // Return list
+        }
+
+        /// <summary>
         /// Gets an dbObject by primaryKey/s
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -153,20 +178,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             }
 
             return objs;    // Return list
-        }
-
-        /// <summary>
-        /// Resolves dbObject by primaryKey/s<pragma/>
-        /// Object needs to have primaryKey/s set!
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
-        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor)
-        {
-            string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
-            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
-            FillObject(classObject, dataSet[0]);   // Fill the object
         }
         
         /// <summary>
@@ -199,7 +210,21 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return objs;    // Return list
         }
 
+        // -----
 
+        /// <summary>
+        /// Resolves dbObject by primaryKey/s<pragma/>
+        /// Object needs to have primaryKey/s set!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor)
+        {
+            string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+            FillObject(classObject, dataSet[0]);   // Fill the object
+        }
 
         /// <summary>
         /// Resolves all foreignKeys with the database<pragma/>
@@ -224,7 +249,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 // When its empty, get it
                 if(foreignObject_value == null)
                 {
-                    foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor); ;
+                    foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
                 }
 
                 // Recursive resolving

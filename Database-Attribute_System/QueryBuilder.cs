@@ -68,6 +68,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             string sqlCmd = $"SELECT * FROM {tableName}";
             // Add SQL-command part
+            if (!(whereClause[0] is string)) throw new InvalidOperationException("Cannot generate SQL-query. WhereClause-params not starting with string!");
             whereClause[0] = $"{sqlCmd} WHERE {whereClause[0]}";
 
             // Build and return the query

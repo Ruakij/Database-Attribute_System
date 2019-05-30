@@ -71,7 +71,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
                 }
                 catch(InvalidOperationException ex)
                 {
-                    throw new InvalidOperationException($"Cannot init foreignObject-field '{fi.Name}' of '{classType.Name}'. {ex.Message}");
+                    throw new InvalidOperationException($"Cannot init foreignObject-field='{fi.Name}' of class='{classType.Name}'.", ex);
                 }
             }
         }

@@ -95,7 +95,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     }
                 }
 
-                if (!nameFound) throw new InvalidOperationException($"{attributeNameAndValue.Key} has no classField!");
+                if (!nameFound) throw new InvalidOperationException($"'{attributeNameAndValue.Key}' has no classField!");
             }
         }
         internal static void ConvertAttributeToDbAttributes(Type classType, List<string> attributeNames)
@@ -117,7 +117,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     }
                 }
 
-                if (!nameFound) throw new InvalidOperationException($"{attributeNames[i]} has no classField!");
+                if (!nameFound) throw new InvalidOperationException($"'{attributeNames[i]}' has no classField!");
             }
         }
 
@@ -141,7 +141,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 DateTime dateTime = (DateTime)obj;
                 return "'" + SqlSerialise(dateTime) + "'";     // wrap in sql-brackets and convert to sql-datetime
             }
-            else if (obj.GetType() == typeof(Guid))        // Handle DateTime
+            else if (obj.GetType() == typeof(Guid))        // Handle Guid
             {
                 string guid = ((Guid)obj).ToString();  // Get Guid as string
                 return "'" + guid + "'";                 // wrap in sql-brackets
