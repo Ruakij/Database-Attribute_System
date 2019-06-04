@@ -61,7 +61,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     if (baseAttribute._attributeName.ToLower() == data_keySet.Key.ToLower())
                     {
                         object value = data_keySet.Value;
-                        if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);   // If its a guid, i need to convert
+                        //if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);   // If its a guid, i need to convert
 
                         baseAttribute.parentField.SetValue(classObject, value);
                         break;
