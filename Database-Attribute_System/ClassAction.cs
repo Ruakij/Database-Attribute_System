@@ -43,7 +43,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="data">The data</param>
-        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         public static void FillObject<T>(T classObject, Dictionary<string, object> data)
         {
             Type classType = classObject.GetType();
@@ -56,7 +55,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             {
                 // Interate through class-fields
                 foreach (BaseAttribute baseAttribute in dbObject.baseAttributes)
-                { 
+                {
+                    // Remove any leading dots and table-specifiers
+                    string dbAttName = data_keySet.Key;
+                    if (dbAttName.Contains("."))
+                    {
+                        string[] dbAttNameSplit = dbAttName.Split('.');     // Split at the '.'
+                        dbAttName = dbAttNameSplit[dbAttNameSplit.Length - 1];  // Copy the ending text
+                    }
+
                     // If its a match, set the value
                     if (baseAttribute._attributeName.ToLower() == data_keySet.Key.ToLower())
                     {
