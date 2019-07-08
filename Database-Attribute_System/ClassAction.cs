@@ -162,7 +162,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
 
         /// <summary>
-        /// Gets an dbObject by primaryKey/s
+        /// Gets an dbObject by custom where-clause
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
@@ -186,7 +186,34 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             return objs;    // Return list
         }
-        
+
+        /// <summary>
+        /// Gets an dbObject by full query
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="customQuery">Custom sql-query</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        public static List<T> GetListWithQuery<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, params object[] customQuery) where T : new()
+        {
+            // Read dbObject - attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
+            string query = QueryBuilder.BuildQuery(customQuery);
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            List<T> objs = new List<T>() { };
+            foreach (Dictionary<string, object> data in dataSet)
+            {
+                T obj = new T();    // New object
+                FillObject(obj, data);   // Fill it
+                objs.Add(obj);      // Add to list
+            }
+
+            return objs;    // Return list
+        }
+
+
         /// <summary>
         /// Gets a list of dbObjects by attribute/s
         /// </summary>
@@ -194,7 +221,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="classType">Type of class</param>
         /// <param name="fields">class-fields for select</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
-        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         /// <returns>List of dbObjects</returns>
         public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
