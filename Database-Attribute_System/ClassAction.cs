@@ -230,6 +230,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         {
             string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            if (dataSet.Count == 0) throw new InvalidOperationException($"Cannot fetch '{typeof(T).Name}' by primary key/s. No results!");
             FillObject(classObject, dataSet[0]);   // Fill the object
         }
 
@@ -241,7 +243,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         /// <param name="max_depth">Determents how deep resolving will be executed</param>
-        /// <param name="runDataLossChecks">This checks if any class-field and data-attribute does not exists in either (Slower)</param>
         public static void ResolveForeignKeys<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1) where T: new()
         {
             Type classType = classObject.GetType();
