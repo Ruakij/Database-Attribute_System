@@ -286,8 +286,32 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 // When its empty, get it & set it
                 if(foreignObject_value == null)
                 {
+                    // Resolve it
                     foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
-                    foreignObjectAtt.parentField.SetValue(classObject, foreignObject_value);
+                    foreignObjectAtt.parentField.SetValue(classObject, foreignObject_value);    // Set the value
+
+                    // Now scan the just resolved class to be able to set myself
+                    DbObject foreignDbObject = Init(foreignObject_value.GetType());
+                    foreach(DbReverseForeignObject dbReverseForeignObject in foreignDbObject.reverseForeignObjectAttributes)
+                    {
+                        // If the field-names match
+                        if(dbReverseForeignObject._foreignKeyName.ToLower() == dbObject.primaryKeyAttributes[0]._attributeName.ToLower())
+                        {
+                            object myReference;
+                            if (dbReverseForeignObject.parentField.FieldType is IList && dbReverseForeignObject.parentField.FieldType.IsGenericType)  // 1:m
+                            {
+                                // If its a list, i create a list with just myself
+                                myReference = new List<T>() { classObject };
+                            }
+                            else    // 1:1
+                            {
+                                // Otherwise ist just myself
+                                myReference = classObject;
+                            }
+                            dbReverseForeignObject.parentField.SetValue(foreignObject_value, myReference);
+                            break;
+                        }
+                    }
                 }
 
                 // Recursive resolving
@@ -302,6 +326,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             foreach (DbReverseForeignObject reverseForeignObjectAtt in dbObject.reverseForeignObjectAttributes)
             {
                 object reverseForeignObject_value = reverseForeignObjectAtt.parentField.GetValue(classObject);
+                Type reverseForeignObject_type = reverseForeignObjectAtt.parentField.GetType();
 
                 // When its empty, get it & set it
                 if (reverseForeignObject_value == null)
@@ -314,15 +339,30 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
                     if(values.Count == 0) throw new InvalidOperationException($"'{reverseForeignObjectAtt.parentField.Name}' could not been resolved. ReverseForeignObject returned '{values.Count}' values.");
 
+                    // Now scan the just resolved class to be able to set myself
+                    DbObject foreignDbObject = Init(reverseForeignObjectAtt.foreignKeyAttribute.classAttribute.parentClassType);
+                    foreach (DbForeignObject dbForeignObject in foreignDbObject.foreignObjectAttributes)
+                    {
+                        // If the field-names match
+                        if (dbForeignObject._foreignKeyName.ToLower() == dbObject.primaryKeyAttributes[0]._attributeName.ToLower())
+                        {
+                            object myReference = classObject;
+                            foreach(object value in values)
+                            {
+                                dbForeignObject.parentField.SetValue(value, myReference);
+                            }
+                            break;
+                        }
+                    }
+
                     // Check for type to determen 1:1 or 1:m
-                    Type reverseForeignObject_type = reverseForeignObjectAtt.parentField.GetType();
                     if (reverseForeignObject_type is IList && reverseForeignObject_type.IsGenericType)  // List, so 1:m
                     {
                         reverseForeignObject_value = values;
                     }
                     else    // Not list, so 1:1
                     {
-                        if (values.Count > 1) throw new InvalidOperationException($"'{reverseForeignObjectAtt.parentField.Name}' could not been resolved as ReverseForeignObject returned '{values.Count}' values. (Is it 1:1 instead of 1:m?)");
+                        if (values.Count > 1) throw new InvalidOperationException($"'{reverseForeignObjectAtt.parentField.Name}' could not been resolved as ReverseForeignObject returned '{values.Count}' values. (Is it 1:m instead of 1:1?)");
                         reverseForeignObject_value = values[0];
                     }
                     reverseForeignObjectAtt.parentField.SetValue(classObject, reverseForeignObject_value);
@@ -331,7 +371,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 // Recursive resolving
                 if (max_depth > 1)
                 {
-                    if (reverseForeignObject_value is IList)  // 1:m
+                    if (reverseForeignObject_value is IList && reverseForeignObject_type.IsGenericType)  // 1:m
                     {
                         // If we have a list of objects, we need to recursively go into each one
                         foreach(object value in (IList)reverseForeignObject_value)
