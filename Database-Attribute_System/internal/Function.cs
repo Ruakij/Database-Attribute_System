@@ -14,11 +14,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return str_cpy;
         }
 
-        public static string SqlSerialise(DateTime dt, string format = "yyyy-MM-dd HH:mm:ss")
-        {
-            return dt.ToString(format);
-        }
-
         // Recursive object[] copying
         internal static void RecursiveParameterCopying(ref List<object> paramz, object[] objects)
         {
@@ -124,24 +119,24 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
         public static string SqlSerialise(object obj)
         {
-            if (obj == null)            // Handle null
+            if (obj == null || obj is DBNull)            // Handle null
             {
                 return "null";
             }
-            else if (obj.GetType() == typeof(string))       // Handle strings
+            else if (obj is string)       // Handle strings
             {
                 return "'" + SqlEscape((string)obj) + "'";  // wrap in sql-brackets and escape sql, if any
             }
-            else if (obj.GetType() == typeof(byte) || obj.GetType() == typeof(int) || obj.GetType() == typeof(float) || obj.GetType() == typeof(double))  // Handle int, float & double
+            else if (obj is byte || obj is int || obj is float || obj is double)  // Handle int, float & double
             {
                 return obj.ToString().Replace(",", ".");    // just format to string and form comma to sql-comma
             }
-            else if (obj.GetType() == typeof(DateTime))        // Handle DateTime
+            else if (obj is DateTime)        // Handle DateTime
             {
                 DateTime dateTime = (DateTime)obj;
-                return "'" + SqlSerialise(dateTime) + "'";     // wrap in sql-brackets and convert to sql-datetime
+                return "'" + dateTime.ToString("yyyy-MM-dd HH:mm:ss") + "'";     // wrap in sql-brackets and convert to sql-datetime
             }
-            else if (obj.GetType() == typeof(Guid))        // Handle Guid
+            else if (obj is Guid)        // Handle Guid
             {
                 string guid = ((Guid)obj).ToString();  // Get Guid as string
                 return "'" + guid + "'";                 // wrap in sql-brackets

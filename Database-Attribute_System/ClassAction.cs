@@ -1,5 +1,6 @@
 ﻿using eu.railduction.netcore.dll.Database_Attribute_System.Attributes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -126,7 +127,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 }
 
                 // If no data was found matching this field
-                if (!dataMatchFound) throw new InvalidOperationException($"Cannot create object with primaryKeyData. No data assigned to field '{primaryKeyAtt.parentField.Name}'");
+                if (!dataMatchFound) throw new InvalidOperationException($"PrimaryKey='{primaryKeyAtt.parentField.Name}' is missing.");
             }
 
             ResolveByPrimaryKey<T>(obj, queryExecutor);
@@ -276,20 +277,73 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Read dbObject-attribute
             DbObject dbObject = ClassAction.Init(classType);
 
+            // Resolve foreignObjects
+
             foreach (DbForeignObject foreignObjectAtt in dbObject.foreignObjectAttributes)
             {
                 object foreignObject_value = foreignObjectAtt.parentField.GetValue(classObject);
 
-                // When its empty, get it
+                // When its empty, get it & set it
                 if(foreignObject_value == null)
                 {
                     foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
+                    foreignObjectAtt.parentField.SetValue(classObject, foreignObject_value);
                 }
 
                 // Recursive resolving
-                if (max_depth - 1 > 0)
+                if (max_depth > 1)
                 {
+                    // Go recursively into the next class
                     ResolveForeignKeys(foreignObject_value, queryExecutor, max_depth - 1);
+                }
+            }
+
+            // Resolve reverseForeignObjects
+            foreach (DbReverseForeignObject reverseForeignObjectAtt in dbObject.reverseForeignObjectAttributes)
+            {
+                object reverseForeignObject_value = reverseForeignObjectAtt.parentField.GetValue(classObject);
+
+                // When its empty, get it & set it
+                if (reverseForeignObject_value == null)
+                {
+                    // Generate & set attribute-set
+                    Dictionary<string, object> attributes = new Dictionary<string, object>();
+                    attributes.Add(reverseForeignObjectAtt._foreignKeyName, dbObject.primaryKeyAttributes[0].parentField.GetValue(classObject));
+
+                    List<object> values = GetListByAttribute<object>(reverseForeignObjectAtt.foreignKeyAttribute.classAttribute.parentClassType, attributes, queryExecutor);
+
+                    if(values.Count == 0) throw new InvalidOperationException($"'{reverseForeignObjectAtt.parentField.Name}' could not been resolved. ReverseForeignObject returned '{values.Count}' values.");
+
+                    // Check for type to determen 1:1 or 1:m
+                    Type reverseForeignObject_type = reverseForeignObjectAtt.parentField.GetType();
+                    if (reverseForeignObject_type is IList && reverseForeignObject_type.IsGenericType)  // List, so 1:m
+                    {
+                        reverseForeignObject_value = values;
+                    }
+                    else    // Not list, so 1:1
+                    {
+                        if (values.Count > 1) throw new InvalidOperationException($"'{reverseForeignObjectAtt.parentField.Name}' could not been resolved as ReverseForeignObject returned '{values.Count}' values. (Is it 1:1 instead of 1:m?)");
+                        reverseForeignObject_value = values[0];
+                    }
+                    reverseForeignObjectAtt.parentField.SetValue(classObject, reverseForeignObject_value);
+                }
+
+                // Recursive resolving
+                if (max_depth > 1)
+                {
+                    if (reverseForeignObject_value is IList)  // 1:m
+                    {
+                        // If we have a list of objects, we need to recursively go into each one
+                        foreach(object value in (IList)reverseForeignObject_value)
+                        {
+                            ResolveForeignKeys(value, queryExecutor, max_depth - 1);
+                        }
+                    }
+                    else    // 1:1
+                    {
+                        // Go recursively into the next class
+                        ResolveForeignKeys(reverseForeignObject_value, queryExecutor, max_depth - 1);
+                    } 
                 }
             }
         }
