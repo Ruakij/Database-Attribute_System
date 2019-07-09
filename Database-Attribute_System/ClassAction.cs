@@ -278,7 +278,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             DbObject dbObject = ClassAction.Init(classType);
 
             // Resolve foreignObjects
-
             foreach (DbForeignObject foreignObjectAtt in dbObject.foreignObjectAttributes)
             {
                 object foreignObject_value = foreignObjectAtt.parentField.GetValue(classObject);
@@ -319,6 +318,62 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 {
                     // Go recursively into the next class
                     ResolveForeignKeys(foreignObject_value, queryExecutor, max_depth - 1);
+                }
+            }
+
+            // Resolve intermediateForeignObjects
+            foreach (DbIntermediateForeignObject intermediateForeignObjectAtt in dbObject.intermediateObjectAttributes)
+            {
+                object intermediateForeignObject_value = intermediateForeignObjectAtt.parentField.GetValue(classObject);
+
+                // When its empty, get it & set it
+                if (intermediateForeignObject_value == null)
+                {
+                    // Generate & set attribute-set
+                    Dictionary<string, object> attributes = new Dictionary<string, object>();
+                    attributes.Add(intermediateForeignObjectAtt._keyName, dbObject.primaryKeyAttributes[0].parentField.GetValue(classObject));
+
+                    string query = QueryBuilder.SelectByAttribute(intermediateForeignObjectAtt._intermediateTableName, attributes);   // Generate query
+                    List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+                    // Extract data
+                    List<object> values = new List<object>();
+                    for (int i=0; i<dataSet.Count; i++)
+                    {
+                        Dictionary<string, object> data = dataSet[i];
+                        object primaryKeyValue = data[intermediateForeignObjectAtt.foreignPrimaryKeyAttribute._attributeName];
+
+                        values.Add(GetByPrimaryKey<object>(intermediateForeignObjectAtt.foreignPrimaryKeyAttribute.classAttribute.parentClassType, primaryKeyValue, queryExecutor));
+                    }
+
+                    // Now scan the just resolved class to be able to set myself
+                    DbObject foreignDbObject = Init(intermediateForeignObjectAtt.foreignPrimaryKeyAttribute.classAttribute.parentClassType);
+                    foreach (DbForeignObject dbForeignObject in foreignDbObject.foreignObjectAttributes)
+                    {
+                        // If the field-names match
+                        if (dbForeignObject._foreignKeyName.ToLower() == dbObject.primaryKeyAttributes[0]._attributeName.ToLower())
+                        {
+                            object myReference = classObject;
+                            foreach (object value in values)
+                            {
+                                dbForeignObject.parentField.SetValue(value, myReference);
+                            }
+                            break;
+                        }
+                    }
+
+                    // Set value
+                    intermediateForeignObject_value = values;
+                    intermediateForeignObjectAtt.parentField.SetValue(classObject, intermediateForeignObject_value);
+                }
+
+                // Recursive resolving
+                if (max_depth > 1)
+                {
+                    // If we have a list of objects, we need to recursively go into each one
+                    foreach (object value in (IList)intermediateForeignObject_value)
+                    {
+                        ResolveForeignKeys(value, queryExecutor, max_depth - 1);
+                    }
                 }
             }
 

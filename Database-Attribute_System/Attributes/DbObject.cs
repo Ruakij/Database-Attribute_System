@@ -21,6 +21,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         public List<DbForeignKey> foreignKeyAttributes = new List<DbForeignKey>() { };
         public List<DbForeignObject> foreignObjectAttributes = new List<DbForeignObject>() { };
         public List<DbReverseForeignObject> reverseForeignObjectAttributes = new List<DbReverseForeignObject>() { };
+        public List<DbIntermediateForeignObject> intermediateObjectAttributes = new List<DbIntermediateForeignObject>() { };
 
         /// <summary>
         /// Marks variable as database-table
@@ -73,6 +74,11 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
                     {
                         rfobj.Init(fi, this);
                         this.reverseForeignObjectAttributes.Add(rfobj);
+                    }
+                    else if (fi.GetCustomAttribute(typeof(DbIntermediateForeignObject), true) is DbIntermediateForeignObject iobj)    // ReverseForeignObjects
+                    {
+                        iobj.Init(fi, this);
+                        this.intermediateObjectAttributes.Add(iobj);
                     }
                 }
                 catch(InvalidOperationException ex)
