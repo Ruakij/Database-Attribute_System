@@ -87,10 +87,13 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
         public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
-            Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
-            primaryKeyData.Add(null, primaryKeyValue);
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
 
-            return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor);
+            if (dbObject.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"No primaryKey found in '{classType.Name}'");
+            if (dbObject.primaryKeyAttributes.Count > 1) throw new InvalidOperationException($"This 'GetByPrimaryKey' method only supports 1 primaryKey ('{dbObject.primaryKeyAttributes.Count}' found in '{classType.Name}')");
+
+            return GetByPrimaryKey<T>(classType, dbObject.primaryKeyAttributes[0]._attributeName, primaryKeyValue, queryExecutor);
         }
         public static T GetByPrimaryKey<T>(Type classType, string primaryKeyName, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
@@ -106,6 +109,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             // Read dbObject-attribute
             DbObject dbObject = ClassAction.Init(classType);
+
+            if (dbObject.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"No primaryKey found in '{classType.Name}'");
 
             // iterate thru them to check and fill object
             foreach (DbPrimaryKey primaryKeyAtt in dbObject.primaryKeyAttributes)
