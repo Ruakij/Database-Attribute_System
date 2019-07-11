@@ -135,8 +135,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 if (!dataMatchFound) throw new InvalidOperationException($"PrimaryKey='{primaryKeyAtt.parentField.Name}' is missing.");
             }
 
-            ResolveByPrimaryKey<T>(obj, queryExecutor);
-
+            try
+            {
+                ResolveByPrimaryKey<T>(obj, queryExecutor);
+            }catch(InvalidOperationException)
+            {
+                // If there is no result, return null
+                return default(T);
+            }
+            
             return obj;
         }
 
@@ -258,13 +265,16 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
-        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor)
+        public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, bool throwExceptions = true)
         {
             string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
             List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
 
-            if (dataSet.Count == 0) throw new InvalidOperationException($"Cannot fetch '{typeof(T).Name}' by primary key/s. No results!");
-            FillObject(classObject, dataSet[0]);   // Fill the object
+            if (dataSet.Count == 0)
+            {
+                if (throwExceptions) throw new InvalidOperationException($"Cannot fetch '{typeof(T).Name}' by primary key/s. No results!");
+            }
+            else FillObject(classObject, dataSet[0]);   // Fill the object
         }
 
         /// <summary>
