@@ -457,5 +457,89 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 }
             }
         }
+
+
+        /// <summary>
+        /// Updates class to database-object</pragma>
+        /// Only works with primary-key/s!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="max_depth">Determents how deep resolving will be executed (if the corresponding foreignKey-object is resolved)</param>
+        public static void Update<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
+        {
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classObject.GetType());
+
+            if(max_depth-1 > 0)
+            {
+                // Update all foreignObjects before handling myself
+                foreach (DbForeignObject foreignObject in dbObject.foreignObjectAttributes)
+                {
+                    object foreignObjectRef = foreignObject.parentField.GetValue(classObject);
+                    if (foreignObjectRef != null)
+                        Update(foreignObjectRef, queryExecutor, max_depth - 1);
+                }
+            }
+
+            string updateQuery = QueryBuilder.UpdateByPrimaryKey(classObject);
+            queryExecutor.Invoke(updateQuery);
+        }
+
+        /// <summary>
+        /// Inserts class to database-object
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="max_depth">Determents how deep insertion will be executed (if the corresponding foreignKey-object is resolved)</param>
+        public static void Insert<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
+        {
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classObject.GetType());
+
+            if (max_depth - 1 > 0)
+            {
+                // Update all foreignObjects before handling myself
+                foreach (DbForeignObject foreignObject in dbObject.foreignObjectAttributes)
+                {
+                    object foreignObjectRef = foreignObject.parentField.GetValue(classObject);
+                    if (foreignObjectRef != null)
+                        Insert(foreignObjectRef, queryExecutor, max_depth - 1);
+                }
+            }
+
+            string insertQuery = QueryBuilder.InsertAttributesByObject(classObject);
+            queryExecutor.Invoke(insertQuery);
+        }
+
+        /// <summary>
+        /// Deletes class from database-object</pragma>
+        /// Only works with primary-key/s!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="max_depth">Determents how deep deletion will be executed (if the corresponding foreignKey-object is resolved)</param>
+        public static void Delete<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
+        {
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classObject.GetType());
+
+            if (max_depth - 1 > 0)
+            {
+                // Update all foreignObjects before handling myself
+                foreach (DbForeignObject foreignObject in dbObject.foreignObjectAttributes)
+                {
+                    object foreignObjectRef = foreignObject.parentField.GetValue(classObject);
+                    if (foreignObjectRef != null)
+                        Delete(foreignObjectRef, queryExecutor, max_depth - 1);
+                }
+            }
+
+            string deleteQuery = QueryBuilder.DeleteByPrimaryKey(classObject);
+            queryExecutor.Invoke(deleteQuery);
+        }
     }
 }
