@@ -27,8 +27,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 // Check if given class is marked as dbObject
                 if (!(classType.GetCustomAttribute(typeof(DbObject), true) is DbObject dbObject)) throw new InvalidOperationException($"Cannot init '{classType.Name}'. Missing Attribute 'DbObject'");
 
-                dbObject.Init(classType);   // Init dbObject
                 initiatedClassTypes.Add(classType, dbObject);     // Set it to the list
+                dbObject.Init(classType);   // Init dbObject
 
                 cachedDbObject = dbObject;
             }
