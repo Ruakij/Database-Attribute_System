@@ -32,13 +32,30 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
             this.classAttribute = classAttribute;
             this.foreignObjectType = fi.FieldType;
 
-            // Init foreign-object class
-            DbObject foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
-
             if (classAttribute.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{classAttribute.parentClassType.Name}' does not have a primaryKey.");
             if (classAttribute.primaryKeyAttributes.Count > 1) throw new InvalidOperationException($"ReverseForeignObject does not support multiple primaryKeys.");
             // Get primaryKey name if none is set
             if (_foreignKeyName == null) _foreignKeyName = classAttribute.primaryKeyAttributes[0]._attributeName;
+
+            // If its a List, get inner type
+            if (!(fi.FieldType.IsGenericType && (fi.FieldType.GetGenericTypeDefinition() == typeof(List<>))))
+            {
+                // Check the generic list and get inner-type
+                foreach (Type interfaceType in fi.FieldType.GetInterfaces())
+                {
+                    if (interfaceType.IsGenericType &&
+                        interfaceType.GetGenericTypeDefinition()
+                        == typeof(IList<>))
+                    {
+                        foreignObjectType = fi.FieldType.GetGenericArguments()[0];
+                        break;
+                    }
+                }
+                if (foreignObjectType == null) throw new InvalidOperationException("Could not read innter-type of generic-list!");
+            }
+
+            // Init inner-type class
+            DbObject foreignClassAttribute = ClassAction.Init(foreignObjectType);
 
             // Check if my primary-key is set in the foreign-class as foreignKey
             DbPrimaryKey primaryKey = classAttribute.primaryKeyAttributes[0];
