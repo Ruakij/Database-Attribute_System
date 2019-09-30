@@ -41,15 +41,12 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
             this.classAttribute = classAttribute;
             this.foreignObjectType = fi.FieldType;
 
-            // Init foreign-object class
-            DbObject foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
-
             if (classAttribute.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{classAttribute.parentClassType.Name}' does not have a primaryKey.");
             if (classAttribute.primaryKeyAttributes.Count > 1) throw new InvalidOperationException($"IntermediateObject does not support multiple primaryKeys.");
             // Get primaryKey name if none is set
             if (_keyName == null) _keyName = classAttribute.primaryKeyAttributes[0]._attributeName;
 
-            if (!(fi.FieldType is IList && fi.FieldType.IsGenericType))  // 1:m
+            if (!(fi.FieldType.IsGenericType && (fi.FieldType.GetGenericTypeDefinition() == typeof(List<>))))  // 1:m
                 throw new InvalidOperationException($"IntermediateObject has to be typeof(List<T>). Maybe you meant to use DbForeignObject or DbReverseForeignObject for 1:m or 1:1 relations.");
 
             // Check the generic list and get inner-type
@@ -66,13 +63,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
             }
             if (foreignObjectType == null) throw new InvalidOperationException("Could not read innter-type of generic-list!");
 
-            // Now get the primaryKey from my foreignObject
-            DbObject foreignDbObject = ClassAction.Init(foreignObjectType);
+            // Init inner-type class
+            DbObject foreignClassAttribute = ClassAction.Init(foreignObjectType);
+
             // Check the primaryKey/s
-            if (foreignDbObject.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{foreignDbObject.parentClassType.Name}' does not have a primaryKey.");
-            if (foreignDbObject.primaryKeyAttributes.Count > 1) throw new InvalidOperationException($"IntermediateObject does not support multiple primaryKeys. (Found '{foreignDbObject.primaryKeyAttributes.Count}' in '{foreignDbObject.parentClassType.Name}')");
+            if (foreignClassAttribute.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{foreignClassAttribute.parentClassType.Name}' does not have a primaryKey.");
+            if (foreignClassAttribute.primaryKeyAttributes.Count > 1) throw new InvalidOperationException($"IntermediateObject does not support multiple primaryKeys. (Found '{foreignClassAttribute.primaryKeyAttributes.Count}' in '{foreignClassAttribute.parentClassType.Name}')");
             // Save it
-            foreignPrimaryKeyAttribute = foreignDbObject.primaryKeyAttributes[0];
+            foreignPrimaryKeyAttribute = foreignClassAttribute.primaryKeyAttributes[0];
 
             if (_foreignKeyName == null) _foreignKeyName = foreignPrimaryKeyAttribute._attributeName;
         }
