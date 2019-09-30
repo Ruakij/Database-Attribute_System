@@ -38,7 +38,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
             if (_foreignKeyName == null) _foreignKeyName = classAttribute.primaryKeyAttributes[0]._attributeName;
 
             // If its a List, get inner type
-            if (!(fi.FieldType.IsGenericType && (fi.FieldType.GetGenericTypeDefinition() == typeof(List<>))))
+            if (fi.FieldType.IsGenericType && (fi.FieldType.GetGenericTypeDefinition() == typeof(List<>)))
             {
                 // Check the generic list and get inner-type
                 foreach (Type interfaceType in fi.FieldType.GetInterfaces())
