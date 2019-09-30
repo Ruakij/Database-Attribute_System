@@ -69,7 +69,10 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
                     }
                     else if (fi.GetCustomAttribute(typeof(DbForeignObject), true) is DbForeignObject fobj)    // ForeignObjects
                     {
-                        fobj.Init(fi, this);
+                        if(fi.FieldType == this.parentClassType)    // Check if we are referencing ourselfes
+                            fobj.Init(fi, this, this);
+                        else
+                            fobj.Init(fi, this);
 
                         this.foreignObjectAttributes.Add(fobj);
                     }

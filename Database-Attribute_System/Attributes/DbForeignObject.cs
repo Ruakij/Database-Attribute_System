@@ -26,14 +26,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
             this._foreignKeyName = foreignKeyName;
         }
 
-        public void Init(FieldInfo fi, DbObject classAttribute)
+        public void Init(FieldInfo fi, DbObject classAttribute, DbObject foreignClassAttribute = null)
         {
             this.parentField = fi;
             this.classAttribute = classAttribute;
             this.foreignObjectType = fi.FieldType;
 
             // Init foreign-object class
-            DbObject foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
+            if(foreignClassAttribute == null)
+                foreignClassAttribute = ClassAction.Init(this.foreignObjectType);
 
             // Check if something is weird
             if (foreignClassAttribute.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"'{foreignClassAttribute.parentClassType.Name}' does not have a primaryKey.");
