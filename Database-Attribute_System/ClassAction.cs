@@ -69,10 +69,16 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                     if (baseAttribute._attributeName.ToLower() == data_keySet.Key.ToLower())
                     {
                         object value = data_keySet.Value;
-                        //if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);   // If its a guid, i need to convert
+                        if (!(value is DBNull))     // Check if value is empty
+                        {
+                            //if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);   // If its a guid, i need to convert
 
-                        baseAttribute.parentField.SetValue(classObject, value);
-                        break;
+                            baseAttribute.parentField.SetValue(classObject, value);
+                            break;
+                        }
+
+
+
                     }
                 }
             }
@@ -295,13 +301,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Resolve foreignObjects
             foreach (DbForeignObject foreignObjectAtt in dbObject.foreignObjectAttributes)
             {
+                object foreignKey_value = foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject);
                 object foreignObject_value = foreignObjectAtt.parentField.GetValue(classObject);
 
-                // When its empty, get it & set it
-                if(foreignObject_value == null)
+                // When key is set and object is empty, get it & set it
+                if(foreignKey_value != null && foreignObject_value == null)
                 {
                     // Resolve it
-                    foreignObject_value = GetByPrimaryKey<T>(foreignObjectAtt.foreignObjectType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
+                    foreignObject_value = GetByPrimaryKey<T>(foreignObjectAtt.foreignObjectType, foreignKey_value, queryExecutor);
                     foreignObjectAtt.parentField.SetValue(classObject, foreignObject_value);    // Set the value
 
                     // Now scan the just resolved class to be able to set myself
