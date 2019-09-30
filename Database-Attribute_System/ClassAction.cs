@@ -104,13 +104,13 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
         public static T GetByPrimaryKey<T>(Type classType, Dictionary<string, object> primaryKeyData, Func<string, List<Dictionary<string, object>>> queryExecutor) where T: new()
         {
-            // Create new empty object
-            T obj = new T();
-
             // Read dbObject-attribute
             DbObject dbObject = ClassAction.Init(classType);
 
             if (dbObject.primaryKeyAttributes.Count < 1) throw new InvalidOperationException($"No primaryKey found in '{classType.Name}'");
+
+            // Create new empty object
+            T obj = (T)dbObject.parentCInfo.Invoke(null);
 
             // iterate thru them to check and fill object
             foreach (DbPrimaryKey primaryKeyAtt in dbObject.primaryKeyAttributes)
@@ -301,7 +301,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                 if(foreignObject_value == null)
                 {
                     // Resolve it
-                    foreignObject_value = GetByPrimaryKey<T>(classType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
+                    foreignObject_value = GetByPrimaryKey<T>(foreignObjectAtt.foreignObjectType, foreignObjectAtt.foreignKeyAttribute.parentField.GetValue(classObject), queryExecutor);
                     foreignObjectAtt.parentField.SetValue(classObject, foreignObject_value);    // Set the value
 
                     // Now scan the just resolved class to be able to set myself

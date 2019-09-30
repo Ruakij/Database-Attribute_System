@@ -13,6 +13,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         public string _tableName;
 
         public Type parentClassType;
+        public ConstructorInfo parentCInfo;
 
         // All childrenAttributes
         public List<BaseAttribute> baseAttributes = new List<BaseAttribute>() { };
@@ -35,6 +36,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System.Attributes
         public void Init(Type classType)
         {
             this.parentClassType = classType;
+            parentCInfo = classType.GetConstructor(Type.EmptyTypes);
+
             this._tableName = this._tableName ?? classType.Name;    // If no alternative table-name is specified, use the class-name
 
             // Iterate thru all fields
