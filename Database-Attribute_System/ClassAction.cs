@@ -71,10 +71,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                         object value = data_keySet.Value;
                         if (!(value is DBNull))     // Check if value is empty
                         {
-                            // Convert type if necessary
-                            if (baseAttribute.parentField.FieldType == typeof(Guid)) value = new Guid((string)value);
-                            if (baseAttribute.parentField.FieldType == typeof(char)) value = (char)value;
-
                             baseAttribute.parentField.SetValue(classObject, value);
                             break;
                         }
