@@ -54,6 +54,8 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             // Iterate through data
             foreach (KeyValuePair<string, object> data_keySet in data)
             {
+                bool dataMatchFound = false;
+
                 // Interate through class-fields
                 foreach (BaseAttribute baseAttribute in dbObject.baseAttributes)
                 {
@@ -72,13 +74,14 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
                         if (!(value is DBNull))     // Check if value is empty
                         {
                             baseAttribute.parentField.SetValue(classObject, value);
-                            break;
                         }
 
-
-
+                        dataMatchFound = true;
+                        break;
                     }
                 }
+
+                if (!dataMatchFound) throw new InvalidOperationException($"Attribute '{data_keySet.Key}' has no match in object '{classObject.GetType().Name}'");
             }
         }
 
