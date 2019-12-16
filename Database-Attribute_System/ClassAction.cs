@@ -36,7 +36,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return cachedDbObject;
         }
 
-
         /// <summary>
         /// Fills an given dbObject with given data<para/>
         /// Data-attribute-names and class-fieldNames have to match! (non case-sensitive)
@@ -44,6 +43,21 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="data">The data</param>
+        /// <param name="key">Key-name of data</param>
+        public static void FillObject<T>(T classObject, string key, object data)
+        {
+            Dictionary<string, object> dicData = new Dictionary<string, object>();
+            dicData.Add(key, data);
+            FillObject<T>(classObject, dicData);
+        }
+        /// <summary>
+        /// Fills an given dbObject with given data<para/>
+        /// Data-attribute-names and class-fieldNames have to match! (non case-sensitive)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classObject">Given object (marked with Db-attributes)</param>
+        /// <param name="data">The data</param>
+        /// <param name="key">Key-name of data</param>
         public static void FillObject<T>(T classObject, Dictionary<string, object> data)
         {
             Type classType = classObject.GetType();
@@ -90,8 +104,11 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// Gets an dbObject by primaryKey/s
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="classType">The classType (marked with Db-attributes)</param>
+        /// <param name="primaryKeyName">Name of the primaryKey</param>
+        /// <param name="primaryKeyValue">Value of the primaryKey</param>
+        /// <param name="primaryKeyData">KeyData of multiple primaryKeys</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static T GetByPrimaryKey<T>(Type classType, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             // Read dbObject-attribute
@@ -102,6 +119,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             return GetByPrimaryKey<T>(classType, dbObject.primaryKeyAttributes[0]._attributeName, primaryKeyValue, queryExecutor);
         }
+        /// <summary>
+        /// Gets an dbObject by primaryKey/s
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classType">The classType (marked with Db-attributes)</param>
+        /// <param name="primaryKeyName">Name of the primaryKey</param>
+        /// <param name="primaryKeyValue">Value of the primaryKey</param>
+        /// <param name="primaryKeyData">KeyData of multiple primaryKeys</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static T GetByPrimaryKey<T>(Type classType, string primaryKeyName, object primaryKeyValue, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             Dictionary<string, object> primaryKeyData = new Dictionary<string, object>() { };
@@ -109,6 +135,15 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
 
             return GetByPrimaryKey<T>(classType, primaryKeyData, queryExecutor);
         }
+        /// <summary>
+        /// Gets an dbObject by primaryKey/s
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classType">The classType (marked with Db-attributes)</param>
+        /// <param name="primaryKeyName">Name of the primaryKey</param>
+        /// <param name="primaryKeyValue">Value of the primaryKey</param>
+        /// <param name="primaryKeyData">KeyData of multiple primaryKeys</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static T GetByPrimaryKey<T>(Type classType, Dictionary<string, object> primaryKeyData, Func<string, List<Dictionary<string, object>>> queryExecutor) where T: new()
         {
             // Read dbObject-attribute
@@ -161,7 +196,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static List<T> GetList<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
         {
             // Read dbObject - attribute
@@ -182,12 +217,41 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         }
 
         /// <summary>
+        /// Gets a list of dbObjects by attribute/s
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="classType">Type of class</param>
+        /// <param name="fields">class-fields for select</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
+        /// <returns>List of dbObjects</returns>
+        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
+        {
+            // Read dbObject-attribute
+            DbObject dbObject = ClassAction.Init(classType);
+
+            Function.ConvertAttributeToDbAttributes(classType, fields);
+
+            string query = QueryBuilder.SelectByAttribute(dbObject._tableName, fields);   // Generate query
+            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
+
+            List<T> objs = new List<T>() { };
+            foreach (Dictionary<string, object> data in dataSet)
+            {
+                T obj = new T();    // New object
+                FillObject(obj, data);   // Fill it
+                objs.Add(obj);      // Add to list
+            }
+
+            return objs;    // Return list
+        }
+
+        /// <summary>
         /// Gets an dbObject by custom where-clause
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="whereClause">Custom where-clause params attached to query (SELECT * FROM tableName WHERE whereClause)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static List<T> GetListWithWhere<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, params object[] whereClause) where T : new()
         {
             // Read dbObject - attribute
@@ -213,7 +277,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
         /// <param name="customQuery">Custom sql-query</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static List<T> GetListWithQuery<T>(Type classType, Func<string, List<Dictionary<string, object>>> queryExecutor, params object[] customQuery) where T : new()
         {
             // Read dbObject - attribute
@@ -233,36 +297,6 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
             return objs;    // Return list
         }
 
-
-        /// <summary>
-        /// Gets a list of dbObjects by attribute/s
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="classType">Type of class</param>
-        /// <param name="fields">class-fields for select</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
-        /// <returns>List of dbObjects</returns>
-        public static List<T> GetListByAttribute<T>(Type classType, Dictionary<string, object> fields, Func<string, List<Dictionary<string, object>>> queryExecutor) where T : new()
-        {
-            // Read dbObject-attribute
-            DbObject dbObject = ClassAction.Init(classType);
-
-            Function.ConvertAttributeToDbAttributes(classType, fields);
-
-            string query = QueryBuilder.SelectByAttribute(dbObject._tableName, fields);   // Generate query
-            List<Dictionary<string, object>> dataSet = queryExecutor(query);    // Execute
-
-            List<T> objs = new List<T>() { };
-            foreach(Dictionary<string, object> data in dataSet)
-            {
-                T obj = new T();    // New object
-                FillObject(obj, data);   // Fill it
-                objs.Add(obj);      // Add to list
-            }
-
-            return objs;    // Return list
-        }
-
         // -----
 
         /// <summary>
@@ -271,7 +305,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         public static void ResolveByPrimaryKey<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, bool throwExceptions = true)
         {
             string query = QueryBuilder.SelectByPrimaryKey(classObject);   // Generate query
@@ -290,7 +324,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         /// <param name="max_depth">Determents how deep resolving will be executed</param>
         public static void ResolveForeignKeys<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1) where T: new()
         {
@@ -473,7 +507,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         /// <param name="max_depth">Determents how deep resolving will be executed (if the corresponding foreignKey-object is resolved)</param>
         public static void Update<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
         {
@@ -500,7 +534,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         /// <param name="max_depth">Determents how deep insertion will be executed (if the corresponding foreignKey-object is resolved)</param>
         public static void Insert<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
         {
@@ -528,7 +562,7 @@ namespace eu.railduction.netcore.dll.Database_Attribute_System
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="classObject">Given object (marked with Db-attributes)</param>
-        /// <param name="queryExecutor">Function to handle query-calls - Has to return Dictionary[attributeName, attributeValue]</param>
+        /// <param name="queryExecutor">Function to handle query-calls</param>
         /// <param name="max_depth">Determents how deep deletion will be executed (if the corresponding foreignKey-object is resolved)</param>
         public static void Delete<T>(T classObject, Func<string, List<Dictionary<string, object>>> queryExecutor, int max_depth = 1)
         {
