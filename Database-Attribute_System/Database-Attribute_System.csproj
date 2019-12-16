@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>eu.railduction.netcore.dll.Database_Attribute_System</RootNamespace>
     <SignAssembly>false</SignAssembly>
-    <Version>1.5.21</Version>
+    <Version>1.5.3</Version>
   </PropertyGroup>
 
 </Project>
